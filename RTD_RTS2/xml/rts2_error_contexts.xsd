@@ -1,0 +1,57 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!-- ********************************************** -->
+<!-- * Archive: RTS2 error management definition  * -->
+<!-- * Author: Juan Cabello                       * -->
+<!-- * Date  : 08/01/2012                         * -->
+<!-- ********************************************** -->
+<xs:schema xmlns:xs="http://www.w3.org/2001/XMLSchema" targetNamespace="http://gloria.eu/rts2/error"  xmlns:gloria.rts2.error="http://gloria.eu/rts2/error">
+
+<xs:element name="rts2ErrorManagement">
+	<xs:complexType>
+      <xs:sequence>
+      	<xs:element name="defaultBehaviour" type="gloria.rts2.error:behaviour"></xs:element>
+		<xs:element name="context" type="gloria.rts2.error:context" maxOccurs="unbounded" minOccurs="0"></xs:element>
+	</xs:sequence>
+	</xs:complexType>
+</xs:element>
+
+<xs:simpleType name="behaviour">
+	<xs:restriction base="xs:string">
+		<xs:enumeration value="IGNORE_ERRORS"></xs:enumeration>
+		<xs:enumeration value="NO_IGNORE_ERRORS"></xs:enumeration>
+	</xs:restriction>
+</xs:simpleType>
+
+<xs:simpleType name="matchType">
+	<xs:restriction base="xs:string">
+		<xs:enumeration value="SUBSTRING"></xs:enumeration>
+		<xs:enumeration value="REGEX"></xs:enumeration>
+	</xs:restriction>
+</xs:simpleType>
+    
+<xs:simpleType name="actionType">
+	<xs:restriction base="xs:string">
+		<xs:enumeration value="IGNORE"></xs:enumeration>
+		<xs:enumeration value="EXCEPTION"></xs:enumeration>
+	</xs:restriction>
+</xs:simpleType>
+    
+<xs:complexType name="context">
+	<xs:sequence>
+		<xs:element name="name" type="xs:string"></xs:element>
+		<xs:element name="message" type="gloria.rts2.error:rts2Message" maxOccurs="unbounded" minOccurs="0"></xs:element>
+	</xs:sequence>
+</xs:complexType>
+    
+<xs:complexType name="rts2Message" >
+	<xs:sequence>
+		<xs:element name="matchType" type="gloria.rts2.error:matchType"></xs:element>
+		<xs:element name="pattern" type="xs:string"></xs:element>
+		<xs:element name="action" type="gloria.rts2.error:actionType"></xs:element>
+		<xs:element name="errorMsg" type="xs:string" minOccurs="0"></xs:element>
+		<xs:element name="errorCod" type="xs:integer" minOccurs="0"></xs:element>
+	</xs:sequence>
+</xs:complexType>
+
+
+</xs:schema>

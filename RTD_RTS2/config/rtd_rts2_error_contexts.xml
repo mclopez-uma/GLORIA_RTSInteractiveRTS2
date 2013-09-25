@@ -1,0 +1,38 @@
+<?xml version="1.0" encoding="UTF-8" standalone="yes"?>
+<ns2:rts2ErrorManagement xmlns:ns2="http://gloria.eu/rts2/error">
+	<defaultBehaviour>NO_IGNORE_ERRORS</defaultBehaviour>
+	<context>
+		<name>camera_start_exposure</name>
+		<message>
+			<matchType>SUBSTRING</matchType>
+			<pattern>loadValues cannot set value USEFT</pattern>
+			<action>IGNORE</action>
+		</message>
+	</context>
+	<context>
+		<name>now_single</name>
+		<message>
+			<matchType>SUBSTRING</matchType>
+			<pattern>unknow command now_single</pattern>
+			<action>EXCEPTION</action>
+		</message>
+	</context>
+	<context>
+		<name>executor_next</name>
+		<message>
+			<matchType>SUBSTRING</matchType>
+			<pattern>target with ID -1</pattern>
+			<action>IGNORE</action>
+		</message>
+	</context>
+	<context>
+		<name>context02</name>
+		<message>
+			<matchType>SUBSTRING</matchType>
+			<pattern>PATTERN</pattern>
+			<action>IGNORE</action>
+			<errorMsg>msg</errorMsg>
+			<errorCod>1</errorCod>
+		</message>
+	</context>
+</ns2:rts2ErrorManagement>
