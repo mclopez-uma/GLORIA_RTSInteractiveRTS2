@@ -1268,10 +1268,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		}else if (imageContext.isExposing()){
 			throw new RTException ("The previous exposure hasn't stoped yet.");
 		}else{
-						
-			//Avoiding RTS2 bug -> remove fits image previously.
-			//sshRemovePreviousFitsImage();
-						
+									
 			//Start exposure
 			List<String> valueProp = new ArrayList<String>();
 			valueProp.add(String.valueOf(exposureTime));
@@ -2469,9 +2466,12 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		}
 		
 		public synchronized void exposeStart(String uuid){
+			
 			this.uuid = uuid;
 			this.exposing = true;
 			this.transfered = false;
+			
+			this.transfer = TransferStatus.NOT_STARTED;
 		}
 		
 		public synchronized void exposeCancel(){

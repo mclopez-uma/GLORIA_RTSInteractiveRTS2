@@ -204,11 +204,11 @@ public class FocuserRTD extends DeviceRTD implements RTDFocuserInterface {
 			values.removeAll(removeDevices);
 			
 			DeviceProperty prop;
-			for (String deviceId: values){	
+			for (String dev: values){	
 				try{
-					prop =  ((CameraRTD) DeviceDiscoverer.getRTD(deviceId)).devGetDeviceProperty("focuser");
+					prop =  ((CameraRTD) DeviceDiscoverer.getRTD(dev)).devGetDeviceProperty("focuser");
 					if (prop.getValue().get(0).equals(this.getDeviceId())){
-						return deviceId;
+						return dev;
 					}	
 				} catch (Exception e) {
 					if (!e.getMessage().contains("The property does not exist")){

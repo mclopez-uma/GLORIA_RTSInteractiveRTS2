@@ -2,6 +2,7 @@ package eu.gloria.rts2.rtd;
 
 import java.util.List;
 
+import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
 import eu.gloria.rt.entity.device.DeviceGeneral;
@@ -88,15 +89,16 @@ public class FramRainSensorRTD extends DeviceRTD implements	RTDRainDetectorInter
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (allProperties){
-			
-			DeviceProperty devProperty = new DeviceProperty();
-			devProperty = devGetDeviceProperty("rain");
-			
-			dev.getProperties().add(devProperty);
-			
+		if (dev.getAlarmState() == AlarmState.NONE){
+			if (allProperties){
+
+				DeviceProperty devProperty = new DeviceProperty();
+				devProperty = devGetDeviceProperty("rain");
+
+				dev.getProperties().add(devProperty);
+
+			}
 		}
-		
 		return dev;
 		
 	}

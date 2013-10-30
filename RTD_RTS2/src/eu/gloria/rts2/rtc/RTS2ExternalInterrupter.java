@@ -5,8 +5,12 @@ import java.util.List;
 import java.util.Timer;
 import java.util.TimerTask;
 
+import org.codehaus.jackson.map.ObjectMapper;
+
+import eu.gloria.rt.entity.device.DeviceProperty;
 import eu.gloria.rt.exception.RTException;
 import eu.gloria.rtc.DeviceDiscoverer;
+import eu.gloria.rtc.environment.config.device.ConfigDeviceManager;
 import eu.gloria.rtc.op.ExtEventResume;
 import eu.gloria.rtc.op.ExtExecInterruptionState;
 import eu.gloria.rtc.op.ExtRtsInterruptionException;
@@ -96,8 +100,6 @@ public class RTS2ExternalInterrupter implements IRtsExternalInterrupter {
 			Rts2GatewayDeviceManager gatewayDevManager = new Rts2GatewayDeviceManager();
 			gatewayDevManager.executeCmd (this.executor,  "now_single+"+String.valueOf(idleTarget), false);
 			
-//			((eu.gloria.rts2.rtd.DeviceRTD) DeviceDiscoverer.getRTD(this.executor)).devExecuteCmdAsync ("now+"+String.valueOf(idleTarget),false);
-
 			Rts2Messages.handleErrorMessages("now_single",Rts2MessageType.error, this.executor, time);
 			
 			
@@ -115,15 +117,12 @@ public class RTS2ExternalInterrupter implements IRtsExternalInterrupter {
 			throw new ExtRtsInterruptionException("Error interrupting the system");
 		} catch (RTException e) {
 			
-			if (e.getMessage().contains("unknow command now_single")){	//Watcher no tiene now_single de momento
+			if (e.getMessage().contains("unknow command now_single")){	//B3 no tiene now_single de momento
 				try {
 					long time = Rts2Date.now();
 					Rts2GatewayDeviceManager gatewayDevManager = new Rts2GatewayDeviceManager();
 
 					gatewayDevManager.executeCmd (this.executor,  "now+"+String.valueOf(idleTarget), false);
-
-
-					//				((eu.gloria.rts2.rtd.DeviceRTD) DeviceDiscoverer.getRTD(this.executor)).devExecuteCmdAsync ("now+"+String.valueOf(idleTarget),false);
 
 					Rts2Messages.handleErrorMessages("now",Rts2MessageType.error, this.executor, time);
 
@@ -173,9 +172,17 @@ public class RTS2ExternalInterrupter implements IRtsExternalInterrupter {
 
 			Rts2GatewayDeviceManager gatewayDevManager = new Rts2GatewayDeviceManager();
 			try {
-				gatewayDevManager.executeCmd (this.executor,  "now_single+"+String.valueOf(target), false);
+				
+				if (!target.equals("-1")){			
+				
+					gatewayDevManager.executeCmd (this.executor,  "now_single+"+String.valueOf(target), false);
 
-				Rts2Messages.handleErrorMessages("now_single",Rts2MessageType.error, this.executor, time);
+					Rts2Messages.handleErrorMessages("now_single",Rts2MessageType.error, this.executor, time);
+				}else{
+					
+					gatewayDevManager.executeCmd (this.executor,  "stop", false);
+					
+				}
 
 			} catch (Rts2CommunicationException e) {
 				throw new ExtRtsInterruptionException("Error resuming the system");
@@ -311,6 +318,9 @@ public class RTS2ExternalInterrupter implements IRtsExternalInterrupter {
 				
 				if (resp.getVars().get(0).getValue().get(0).equals(idleTarget)){
 					
+					//Test shutter property in ccds
+					shutterReset();
+					
 					info.setInterruptable(false);
 					info.setState(ExtExecInterruptionState.INTERRUPTED);
 					info.setUnInterruptableReason("Already INTERRUPTED.");
@@ -328,6 +338,57 @@ public class RTS2ExternalInterrupter implements IRtsExternalInterrupter {
 				e.printStackTrace();
 			}
 
+		}
+		
+		private void shutterReset (){
+			
+			ConfigDeviceManager configDeviceManager = null;
+			try {
+				configDeviceManager = new ConfigDeviceManager();
+			} catch (Exception e1) {
+				// TODO Auto-generated catch block
+				e1.printStackTrace();
+			}
+						
+			List <String> removeDevices = new ArrayList<String> ();
+			
+			Rts2Cmd cmd = Rts2Cmd.getNewCmd(Rts2CmdType.devbytype);
+			
+			cmd.getParameters().put("t", "3");
+			
+			try {
+				String jsonContent = cmd.execute();
+				
+				ObjectMapper mapper = new ObjectMapper();
+				ArrayList<String> values = (ArrayList<String>) mapper.readValue(jsonContent, Object.class);
+				
+				//Removing of devices not in xml
+				for (String deviceId: values){
+					eu.gloria.rt.entity.environment.config.device.Device dev = configDeviceManager.getDevice(deviceId);
+					if (dev == null){
+						removeDevices.add(deviceId);
+					}
+				}			
+				values.removeAll(removeDevices);
+				
+				List<String> valueProp = new ArrayList<String>();
+				valueProp.add("LIGHT");
+				
+				for (String dev: values){	
+					try{
+						DeviceProperty prop =  ((CameraRTD) DeviceDiscoverer.getRTD(dev)).devGetDeviceProperty("SHUTTER");
+						if (prop.getValue().get(0).equals("DARK")){
+							((CameraRTD) DeviceDiscoverer.getRTD(dev)).devUpdateDeviceProperty("SHUTTER", valueProp);
+						}
+					} catch (Exception e) {
+						if (!e.getMessage().contains("The property does not exist")){
+							throw new RTException(e.getMessage());
+						}
+					}
+				}
+			} catch (Exception e) {
+				e.printStackTrace();
+			}
 		}
 		
 	}

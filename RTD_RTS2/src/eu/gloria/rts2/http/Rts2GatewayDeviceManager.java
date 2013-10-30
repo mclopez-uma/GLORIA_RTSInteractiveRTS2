@@ -25,6 +25,7 @@ import eu.gloria.rt.entity.device.DevicePropertyComplexType;
 import eu.gloria.rt.entity.device.DeviceRotator;
 
 import eu.gloria.rt.entity.device.DeviceType;
+import eu.gloria.rt.exception.RTException;
 import eu.gloria.rts2.http.Rts2GatewayDevicePropertiesRequest.RequestType;
 import eu.gloria.tools.cache.CacheManager;
 import eu.gloria.tools.log.LogUtil;
@@ -225,98 +226,123 @@ public class Rts2GatewayDeviceManager {
 					cmd.getParameters().put("d", devName);
 					cmd.getParameters().put("e", "1"); //No extended format
 				
-					String jsonContent = cmd.execute();
-					LogUtil.info(this, ">>>>>>>>>>>>>>Recovering RTS2 device DATA. END");
-					
-					Rts2GatewayDevicePropertiesRequest propReq = null;
-					if (propReqs != null){
-						propReq = propReqs.get(countBucle);
-					}
-					
-					Rts2CmdGetResponse resp = new Rts2CmdGetResponse(jsonContent, propReq);
-					
-					//3 iterates the properties
-					List<DeviceProperty> properties = new ArrayList<DeviceProperty>();
-					List<JsonVariable> jsonVars = resp.getVariables(JsonVariable.PATH_SEPARATOR + "d");
-					
-					//4 Build the device entity instance
-					Device dev = getDeviceEntity(devName, devType, resp.getState());
-					
-					for (JsonVariable jsonVariable : jsonVars) {
-						DeviceProperty devProperty = new DeviceProperty();
-						
-						// Name & values
-						devProperty.setName(jsonVariable.getName());
-						devProperty.getValue().addAll(jsonVariable.getValue());
-						//devProperty.setValue(jsonVariable.getValue().toArray(new String[jsonVariable.getValue().size()]));
-						
-						// Calculate - Basic an Complex types
-						Rts2FlagsDeviceProperty flagsProp = new Rts2FlagsDeviceProperty(jsonVariable.getFlags());
-						DevicePropertyBasicType basicType = flagsProp.getBasicType();
-						DevicePropertyComplexType complexType = flagsProp.getComplexType();
-						devProperty.setBasicType(basicType);
-						devProperty.setComplexType(complexType);
-						
-						// Calculate - possible values (cmd selval con mask)
-						if (devProperty.getBasicType().equals(DevicePropertyBasicType.SELECTION)){
+					String jsonContent = null;
+					Device dev = null;
+					try{
+						jsonContent = cmd.execute();
+						LogUtil.info(this, ">>>>>>>>>>>>>>Recovering RTS2 device DATA. END");
+					}catch(Exception e){
+						if (e.getMessage().contains("Server returned HTTP response code: 400")){
 							
+//							String cacheKey = deviceId + ".device.type";
+//							Map<String, Object> cacheParams = new HashMap<String, Object>();
+							cacheParams.put("DEV_ID", devName);
+//							DeviceType devType;
 							try{
-								cacheKey = devName + ".selval." + devProperty.getName();
-								cacheParams.clear();
-								cacheParams.put("DEV_ID", devName);
-								cacheParams.put("DEV_PROPERTY_NAME", devProperty.getName());
-								List<String> values = (List<String>)CacheManager.getObject(CACHE_RTS2_SELVAL, cacheKey, cacheParams);
-								
-								//In BART.CWF1 there a "filter" property with no values and useless
-								if (values.isEmpty())
-									break;
-								
-								devProperty.getPossibleValue().addAll(values);
+								 devType = (DeviceType) CacheManager.getObject("CACHE_RTS2_DEVICE_TYPE", cacheKey, cacheParams);
 							}catch(Exception ex){
-								throw new Rts2Exception("Error recovering the possible values for a property. " + ex.getMessage());
+								throw new Rts2Exception(ex.getMessage());
 							}
 							
-							//Translates the values to the enumerate values (The values from RTS2 is a number: 0...N)
-							Rts2IntervalPropertyConverter converter = new Rts2IntervalPropertyConverter(devProperty.getValue(), devProperty.getPossibleValue(), true);
-							converter.transformToEnumValues(); //Implicitly...change the values List.
-						    
-						}
-						
-						
-						// Calculate - read/write
-						devProperty.setReadonly(!flagsProp.isValueWritable());
-												
-						// Mandatory = false;
-						devProperty.setMandatory(false);
-						// DefaultValue = null;
-						devProperty.setDefaultValue(null);
-						
-						//minmax
-						JsonGenericVariable minmax =  resp.getMinmax(jsonVariable.getName());
-						if (minmax != null){
+							Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
+							dev = (manager.getDeviceEntity(devName, devType, Rts2Constants.RTS2_DEVICE_FLAG_ERROR_HW));
 							
-							//String[] minMaxString = new String[minmax.getValue().size()];
-							for (int x = 0; x < minmax.getValue().size(); x++ ){
-								//minMaxString[x] = minmax.getValue().get(x).toString();
-								if (minmax.getValue().get(x) != null){
-									devProperty.getMinmax().add(minmax.getValue().get(x).toString());
-								}else{
-									devProperty.getMinmax().add(null);
-								}
-							}
-							//devProperty.setMinmax(minMaxString);
-						}
-						
-						properties.add(devProperty);
-						
+						}	
+//						throw new Rts2Exception(e.getMessage());
 					}
 					
-					//5) Assign the properties.
-					//dev.setProperties(properties.toArray(new DeviceProperty[properties.size()]));
-					dev.getProperties().addAll(properties);
-					dev.setConfiguration(getDeviceConfigurationString(properties));
+					if (jsonContent!=null){
 
-					//10) Add the new device
+						Rts2GatewayDevicePropertiesRequest propReq = null;
+						if (propReqs != null){
+							propReq = propReqs.get(countBucle);
+						}
+
+						Rts2CmdGetResponse resp = new Rts2CmdGetResponse(jsonContent, propReq);
+
+						//3 iterates the properties
+						List<DeviceProperty> properties = new ArrayList<DeviceProperty>();
+						List<JsonVariable> jsonVars = resp.getVariables(JsonVariable.PATH_SEPARATOR + "d");
+
+						//4 Build the device entity instance
+						dev = getDeviceEntity(devName, devType, resp.getState());
+
+						for (JsonVariable jsonVariable : jsonVars) {
+							DeviceProperty devProperty = new DeviceProperty();
+
+							// Name & values
+							devProperty.setName(jsonVariable.getName());
+							devProperty.getValue().addAll(jsonVariable.getValue());
+							//devProperty.setValue(jsonVariable.getValue().toArray(new String[jsonVariable.getValue().size()]));
+
+							// Calculate - Basic an Complex types
+							Rts2FlagsDeviceProperty flagsProp = new Rts2FlagsDeviceProperty(jsonVariable.getFlags());
+							DevicePropertyBasicType basicType = flagsProp.getBasicType();
+							DevicePropertyComplexType complexType = flagsProp.getComplexType();
+							devProperty.setBasicType(basicType);
+							devProperty.setComplexType(complexType);
+
+							// Calculate - possible values (cmd selval con mask)
+							if (devProperty.getBasicType().equals(DevicePropertyBasicType.SELECTION)){
+
+								try{
+									cacheKey = devName + ".selval." + devProperty.getName();
+									cacheParams.clear();
+									cacheParams.put("DEV_ID", devName);
+									cacheParams.put("DEV_PROPERTY_NAME", devProperty.getName());
+									List<String> values = (List<String>)CacheManager.getObject(CACHE_RTS2_SELVAL, cacheKey, cacheParams);
+
+									//In BART.CWF1 there a "filter" property with no values and useless
+									if (values.isEmpty())
+										break;
+
+									devProperty.getPossibleValue().addAll(values);
+								}catch(Exception ex){
+									throw new Rts2Exception("Error recovering the possible values for a property. " + ex.getMessage());
+								}
+
+								//Translates the values to the enumerate values (The values from RTS2 is a number: 0...N)
+								Rts2IntervalPropertyConverter converter = new Rts2IntervalPropertyConverter(devProperty.getValue(), devProperty.getPossibleValue(), true);
+								converter.transformToEnumValues(); //Implicitly...change the values List.
+
+							}
+
+
+							// Calculate - read/write
+							devProperty.setReadonly(!flagsProp.isValueWritable());
+
+							// Mandatory = false;
+							devProperty.setMandatory(false);
+							// DefaultValue = null;
+							devProperty.setDefaultValue(null);
+
+							//minmax
+							JsonGenericVariable minmax =  resp.getMinmax(jsonVariable.getName());
+							if (minmax != null){
+
+								//String[] minMaxString = new String[minmax.getValue().size()];
+								for (int x = 0; x < minmax.getValue().size(); x++ ){
+									//minMaxString[x] = minmax.getValue().get(x).toString();
+									if (minmax.getValue().get(x) != null){
+										devProperty.getMinmax().add(minmax.getValue().get(x).toString());
+									}else{
+										devProperty.getMinmax().add(null);
+									}
+								}
+								//devProperty.setMinmax(minMaxString);
+							}
+
+							properties.add(devProperty);
+
+						}
+
+						//5) Assign the properties.
+						//dev.setProperties(properties.toArray(new DeviceProperty[properties.size()]));
+						dev.getProperties().addAll(properties);
+						dev.setConfiguration(getDeviceConfigurationString(properties));
+
+						//10) Add the new device
+					}
 					devList.add(dev);
 				}
 			

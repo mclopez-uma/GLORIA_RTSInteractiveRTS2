@@ -72,8 +72,9 @@ public class Rts2FlagsDeviceCCD extends Rts2FlagsDevice {
 			activityState = ActivityStateCamera.READY;
 			statusDesc.add("The device is not in error.");
 		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_KILL){
-			activityState = ActivityStateCamera.OFF;
-			statusDesc.add("The device is off.");
+//			activityState = ActivityStateCamera.OFF;
+			activityState = ActivityStateCamera.READY;
+			statusDesc.add("Exposure interrupted.");
 		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_HW){
 			activityState = ActivityStateCamera.ERROR;
 			statusDesc.add("There is a HW error.");

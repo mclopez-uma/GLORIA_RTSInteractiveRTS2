@@ -3,6 +3,7 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
 import eu.gloria.rt.entity.device.DeviceGeneral;
@@ -201,27 +202,28 @@ public class DavisWindSpeedSensorRTD extends DeviceRTD implements RTDWindSpeedIn
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (allProperties){
-			
-			List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();
-			
-			DeviceProperty devProperty = new DeviceProperty();
-			devProperty = devGetDeviceProperty("max_windspeed");
-			devProperties.add(devProperty);
-			
-			devProperty = devGetDeviceProperty("max_peek_windspeed");
-			devProperties.add(devProperty);
-			
-			devProperty = devGetDeviceProperty("AVGWIND");
-			devProperties.add(devProperty);
-			
-			devProperty = devGetDeviceProperty("PEEKWIND");
-			devProperties.add(devProperty);
-			
-			dev.getProperties().addAll(devProperties);
-			
+		if (dev.getAlarmState() == AlarmState.NONE){
+			if (allProperties){
+
+				List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();
+
+				DeviceProperty devProperty = new DeviceProperty();
+				devProperty = devGetDeviceProperty("max_windspeed");
+				devProperties.add(devProperty);
+
+				devProperty = devGetDeviceProperty("max_peek_windspeed");
+				devProperties.add(devProperty);
+
+				devProperty = devGetDeviceProperty("AVGWIND");
+				devProperties.add(devProperty);
+
+				devProperty = devGetDeviceProperty("PEEKWIND");
+				devProperties.add(devProperty);
+
+				dev.getProperties().addAll(devProperties);
+
+			}
 		}
-		
 		return dev;
 	}
 	

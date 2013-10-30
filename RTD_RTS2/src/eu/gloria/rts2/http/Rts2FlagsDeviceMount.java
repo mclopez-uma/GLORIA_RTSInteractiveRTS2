@@ -47,22 +47,7 @@ public class Rts2FlagsDeviceMount extends Rts2FlagsDevice  {
 			activityState = ActivityStateMount.BUSY;
 		}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_IDLE){
 			activityState = ActivityStateMount.READY;
-		}
-				
-		//Checking  ERROR STATE
-		if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_NO){
-			activityState = ActivityStateMount.READY;
-			statusDesc.add("The device is not in error.");
-		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_KILL){
-			activityState = ActivityStateMount.OFF;
-			statusDesc.add("The device is off.");
-		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_HW){
-			activityState = ActivityStateMount.ERROR;
-			statusDesc.add("There is a HW error.");
-		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_NOT_READY){
-			activityState = ActivityStateMount.BUSY;
-			statusDesc.add("The device is not ready.");
-		}			
+		}					
 		
 		
 		//Additional information (OBSERVING, MOVING, PARKED, PARKING). The CUP will not be take into account (consider as another device)
@@ -87,6 +72,21 @@ public class Rts2FlagsDeviceMount extends Rts2FlagsDevice  {
 			activityState = ActivityStateMount.TRACKING;
 			statusDesc.add("The Mount is tracking.");
 		}
+		
+		//Checking  ERROR STATE
+		if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_NO){
+			activityState = ActivityStateMount.READY;
+			statusDesc.add("The device is not in error.");
+		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_KILL){
+			activityState = ActivityStateMount.OFF;
+			statusDesc.add("The device is off.");
+		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_HW){
+			activityState = ActivityStateMount.ERROR;
+			statusDesc.add("There is a HW error.");
+		}else if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_NOT_READY){
+			activityState = ActivityStateMount.BUSY;
+			statusDesc.add("The device is not ready.");
+		}		
 		
 	}
 	

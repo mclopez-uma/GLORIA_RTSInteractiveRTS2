@@ -1,7 +1,6 @@
 <?xml version="1.0" encoding="UTF-8" standalone="yes"?>
 <deviceList xmlns="http://gloria.eu/rt/entity/environment/config/device">
 
-<!-- Preproducción -->
 	<device>
 		<shortName>C0</shortName>
 		<version>1.0</version>

@@ -3,6 +3,7 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
 import eu.gloria.rt.entity.device.DeviceGeneral;
@@ -159,22 +160,24 @@ public class FramWindSpeedSensorRTD extends DeviceRTD implements RTDWindSpeedInt
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (allProperties){
-			
-			List <DeviceProperty> devProperties = null;
-			
-			DeviceProperty devProperty = new DeviceProperty();
-			devProperty = devGetDeviceProperty("windspeed");
-			devProperties.add(devProperty);
-			
-			devProperty = devGetDeviceProperty("max_windspeed");
-			devProperties.add(devProperty);
-			
-			
-			dev.getProperties().addAll(devProperties);
-			
+		if (dev.getAlarmState() == AlarmState.NONE){
+			if (allProperties){
+
+				List <DeviceProperty> devProperties = null;
+
+				DeviceProperty devProperty = new DeviceProperty();
+				devProperty = devGetDeviceProperty("windspeed");
+				devProperties.add(devProperty);
+
+				devProperty = devGetDeviceProperty("max_windspeed");
+				devProperties.add(devProperty);
+
+
+				dev.getProperties().addAll(devProperties);
+
+			}
 		}
-		
+
 		return dev;
 	}
 	

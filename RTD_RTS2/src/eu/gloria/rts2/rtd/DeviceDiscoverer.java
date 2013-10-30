@@ -71,9 +71,9 @@ public class DeviceDiscoverer implements DeviceDiscovererInterface {
 		DeviceDiscoverer disc = new DeviceDiscoverer();
 		
 				
-		System.out.print(disc.getDevices(false));
-		//Device dev = disc.getDevice("DOME1B_rnd", false);
-		//System.out.print(dev.getType());
+//		System.out.print(disc.getDevices(false));
+		Device dev = disc.getDevice("DOME1A", false);
+		System.out.print(dev.getType());
 		//System.out.print(disc.getDevices(false));
 		//System.out.print(disc.getDevice("DAVIS", false));
 

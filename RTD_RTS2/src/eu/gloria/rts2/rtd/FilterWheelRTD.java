@@ -369,6 +369,7 @@ public class FilterWheelRTD extends DeviceRTD implements RTDFilterWheelInterface
 	 */
 	@Override
 	public String fwGetCamera() throws RTException {
+		List <String> removeDevices = new ArrayList<String> ();
 		
 		Rts2Cmd cmd = Rts2Cmd.getNewCmd(Rts2CmdType.devbytype);
 		
@@ -380,19 +381,47 @@ public class FilterWheelRTD extends DeviceRTD implements RTDFilterWheelInterface
 			ObjectMapper mapper = new ObjectMapper();
 			ArrayList<String> values = (ArrayList<String>) mapper.readValue(jsonContent, Object.class);
 			
+			//Removing of devices not in xml
+			for (String deviceId: values){
+				eu.gloria.rt.entity.environment.config.device.Device dev = configDeviceManager.getDevice(deviceId);
+				if (dev == null){
+					removeDevices.add(deviceId);
+				}
+			}			
+			values.removeAll(removeDevices);
+			
 			DeviceProperty prop;
 			String propPre = "wheel";
 			String propName = "wheel";
 			char propSuf = 'A';
-			for (String deviceId: values){				 
-				prop =  ((CameraRTD) DeviceDiscoverer.getRTD(deviceId)).devGetDeviceProperty(propName);
-				while (!prop.getValue().get(0).equals(this.getDeviceId())){
-					propSuf++;
-					propName = propPre + propSuf;
-					prop =  ((CameraRTD) DeviceDiscoverer.getRTD(deviceId)).devGetDeviceProperty(propName);					
+			
+			for (String dev: values){	
+				try{
+					prop =  ((CameraRTD) DeviceDiscoverer.getRTD(dev)).devGetDeviceProperty(propName);
+					while (!prop.getValue().get(0).equals(this.getDeviceId())){
+						propSuf++;
+						propName = propPre + propSuf;
+						prop =  ((CameraRTD) DeviceDiscoverer.getRTD(dev)).devGetDeviceProperty(propName);					
+					}					
+					return dev;					
+				} catch (Exception e) {
+					if (!e.getMessage().contains("The property does not exist")){
+						throw new RTException(e.getMessage());
+					}
 				}
-				return deviceId;
 			}
+			
+//			for (String dev: values){				 
+//				prop =  ((CameraRTD) DeviceDiscoverer.getRTD(dev)).devGetDeviceProperty(propName);
+//				while (!prop.getValue().get(0).equals(this.getDeviceId())){
+//					propSuf++;
+//					propName = propPre + propSuf;
+//					prop =  ((CameraRTD) DeviceDiscoverer.getRTD(dev)).devGetDeviceProperty(propName);					
+//				}
+//				return dev;
+//			}
+			
+			
 			throw new RTException("No camera attached. ");
 		
 		} catch (Exception e) {
