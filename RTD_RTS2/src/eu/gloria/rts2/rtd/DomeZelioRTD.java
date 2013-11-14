@@ -50,14 +50,12 @@ public class DomeZelioRTD extends DomeRTD implements RTDAssociatedDevInterface{
 		String name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN;
 		int sufix = 1;
 		
-		try {
-			while (Rts2GatewayTools.existDeviceName(name)){
-				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN + String.valueOf(sufix);
-				sufix++;
-			}
-		} catch (RTException e) {			
-			e.printStackTrace();
+		
+		while (associatedDeviceIds.contains(name)){
+			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN + String.valueOf(sufix);
+			sufix++;
 		}
+		
 		associatedDeviceIds.add (name);
 		
 		return associatedDeviceIds;

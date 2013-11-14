@@ -29,14 +29,12 @@ public class SensorFramRTD extends DeviceRTD implements RTDAssociatedDevInterfac
 		name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN;
 		sufix = 1;
 
-		try {
-			while (Rts2GatewayTools.existDeviceName(name)){
-				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN + String.valueOf(sufix);
-				sufix++;
-			}
-		} catch (RTException e) {			
-			e.printStackTrace();
+		
+		while (associatedDeviceIds.contains(name)){
+			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN + String.valueOf(sufix);
+			sufix++;
 		}
+		
 		
 		associatedDeviceIds.add (name);
 		
@@ -44,14 +42,12 @@ public class SensorFramRTD extends DeviceRTD implements RTDAssociatedDevInterfac
 		name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_WIND_SPEED;
 		sufix = 1;
 		
-		try {
-			while (Rts2GatewayTools.existDeviceName(name)){
-				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_WIND_SPEED + String.valueOf(sufix);
-				sufix++;
-			}
-		} catch (RTException e) {			
-			e.printStackTrace();
+		
+		while (associatedDeviceIds.contains(name)){
+			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_WIND_SPEED + String.valueOf(sufix);
+			sufix++;
 		}
+		
 		
 		return associatedDeviceIds;
 	}

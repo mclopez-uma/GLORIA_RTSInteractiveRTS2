@@ -273,6 +273,7 @@ public class Rts2GatewayDeviceManager {
 							// Name & values
 							devProperty.setName(jsonVariable.getName());
 							devProperty.getValue().addAll(jsonVariable.getValue());
+							devProperty.setDescription(jsonVariable.getDesc());
 							//devProperty.setValue(jsonVariable.getValue().toArray(new String[jsonVariable.getValue().size()]));
 
 							// Calculate - Basic an Complex types

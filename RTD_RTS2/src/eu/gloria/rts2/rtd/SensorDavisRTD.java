@@ -45,15 +45,12 @@ public class SensorDavisRTD extends DeviceRTD implements RTDAssociatedDevInterfa
 			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_WIND_SPEED;
 			sufix = 1;
 
-			try {
-				while (Rts2GatewayTools.existDeviceName(name)){
-					name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_WIND_SPEED + String.valueOf(sufix);
-					sufix++;
-				}
-			} catch (RTException e) {			
-				e.printStackTrace();
-			}
 			
+			while (associatedDeviceIds.contains(name)){
+				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_WIND_SPEED + String.valueOf(sufix);
+				sufix++;
+			}
+						
 			associatedDeviceIds.add (name);
 		}
 		
@@ -72,15 +69,12 @@ public class SensorDavisRTD extends DeviceRTD implements RTDAssociatedDevInterfa
 			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RH;
 			sufix = 1;
 
-			try {
-				while (Rts2GatewayTools.existDeviceName(name)){
-					name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RH + String.valueOf(sufix);
-					sufix++;
-				}
-			} catch (RTException e) {			
-				e.printStackTrace();
+			
+			while (associatedDeviceIds.contains(name)){
+				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RH + String.valueOf(sufix);
+				sufix++;
 			}
-
+			
 			associatedDeviceIds.add (name);
 		}
 	
@@ -89,14 +83,11 @@ public class SensorDavisRTD extends DeviceRTD implements RTDAssociatedDevInterfa
 		name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN;
 		sufix = 1;
 		
-		try {
-			while (Rts2GatewayTools.existDeviceName(name)){
-				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN + String.valueOf(sufix);
-				sufix++;
-			}
-		} catch (RTException e) {			
-			e.printStackTrace();
-		}
+		
+		while (associatedDeviceIds.contains(name)){
+			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_RAIN + String.valueOf(sufix);
+			sufix++;
+		}		
 		
 		associatedDeviceIds.add (name);
 		
@@ -112,15 +103,12 @@ public class SensorDavisRTD extends DeviceRTD implements RTDAssociatedDevInterfa
 			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_BAROMETER;
 			sufix = 1;
 
-			try {
-				while (Rts2GatewayTools.existDeviceName(name)){
-					name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_BAROMETER + String.valueOf(sufix);
-					sufix++;
-				}
-			} catch (RTException e) {			
-				e.printStackTrace();
+			
+			while (associatedDeviceIds.contains(name)){
+				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_BAROMETER + String.valueOf(sufix);
+				sufix++;
 			}
-
+			
 			associatedDeviceIds.add (name);
 		}
 			
@@ -137,14 +125,12 @@ public class SensorDavisRTD extends DeviceRTD implements RTDAssociatedDevInterfa
 			name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_TEMPERATURE;
 			sufix = 1;
 
-			try {
-				while (Rts2GatewayTools.existDeviceName(name)){
-					name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_TEMPERATURE + String.valueOf(sufix);
-					sufix++;
-				}
-			} catch (RTException e) {			
-						e.printStackTrace();
+			
+			while (associatedDeviceIds.contains(name)){
+				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_TEMPERATURE + String.valueOf(sufix);
+				sufix++;
 			}
+			
 
 			associatedDeviceIds.add (name);
 			
@@ -161,14 +147,12 @@ public class SensorDavisRTD extends DeviceRTD implements RTDAssociatedDevInterfa
 				name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_CLOUD;
 				sufix = 1;
 				
-				try {
-					while (Rts2GatewayTools.existDeviceName(name)){
-						name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_CLOUD + String.valueOf(sufix);
-						sufix++;
-					}
-				} catch (RTException ex) {			
-					ex.printStackTrace();
-				}				
+				
+				while (associatedDeviceIds.contains(name)){
+					name = this.getDeviceId() + "_" + DeviceRTDPrefix.SENSOR_CLOUD + String.valueOf(sufix);
+					sufix++;
+				}
+								
 				associatedDeviceIds.add (name);
 			}				
 		}

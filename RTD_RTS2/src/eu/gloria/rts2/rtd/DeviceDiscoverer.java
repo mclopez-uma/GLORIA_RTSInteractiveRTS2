@@ -213,6 +213,11 @@ public class DeviceDiscoverer implements DeviceDiscovererInterface {
 					
 					parentDevName = deviceId.split("_");
 					
+					if (parentDevName.length>2){
+						
+						parentDevName[0]=parentDevName[0]+"_"+parentDevName[1];
+					}
+					
 					devType = configDeviceManager.getDevice(parentDevName[0]).getType().toString();				
 					devSubtype = configDeviceManager.getDevice(parentDevName[0]).getSubtype();
 				//}
