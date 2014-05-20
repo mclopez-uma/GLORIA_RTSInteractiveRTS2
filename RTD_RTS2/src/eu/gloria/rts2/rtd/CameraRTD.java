@@ -4,7 +4,12 @@ import ij.IJ;
 import ij.ImagePlus;
 import ij.plugin.JpegWriter;
 
+import java.io.BufferedInputStream;
+import java.io.BufferedOutputStream;
+import java.io.DataInputStream;
+import java.io.DataOutputStream;
 import java.io.File;
+import java.io.FileInputStream;
 import java.io.FileOutputStream;
 import java.io.IOException;
 import java.io.InputStream;
@@ -26,6 +31,15 @@ import javax.servlet.http.HttpServletResponse;
 import javax.xml.datatype.DatatypeFactory;
 import javax.xml.datatype.XMLGregorianCalendar;
 
+import org.eclipse.jetty.util.log.Log;
+import org.eso.fits.FitsData;
+import org.eso.fits.FitsHDUnit;
+import org.eso.fits.FitsHeader;
+import org.eso.fits.FitsKeyword;
+
+import eu.gloria.rt.catalogue.Catalogue;
+import eu.gloria.rt.catalogue.ObjCategory;
+import eu.gloria.rt.catalogue.ObjInfo;
 import eu.gloria.rt.db.scheduler.ObservingPlanManager;
 import eu.gloria.rt.db.util.DBUtil;
 import eu.gloria.rt.entity.db.FileContentType;
@@ -46,12 +60,17 @@ import eu.gloria.rt.entity.device.Image;
 import eu.gloria.rt.entity.device.ImageContent;
 import eu.gloria.rt.entity.device.ImageContentType;
 import eu.gloria.rt.entity.device.ImageFormat;
+import eu.gloria.rt.entity.environment.config.device.DeviceType;
+import eu.gloria.rt.exception.CommunicationException;
 import eu.gloria.rt.exception.RTException;
 import eu.gloria.rt.exception.UnsupportedOpException;
 import eu.gloria.rt.tools.ssh.SshCmd;
+import eu.gloria.rt.unit.Radec;
 import eu.gloria.rtc.DeviceDiscoverer;
 import eu.gloria.rtc.op.OpManager;
 import eu.gloria.rtd.RTDCameraInterface;
+import eu.gloria.rtd.RTDFilterWheelInterface;
+import eu.gloria.rtd.RTDMountInterface;
 import eu.gloria.rti_db.tools.RTIDBProxyConnection;
 import eu.gloria.rts2.http.Rts2Cmd;
 import eu.gloria.rts2.http.Rts2CmdGetResponse;
@@ -66,10 +85,12 @@ import eu.gloria.rts2.http.Rts2Messages;
 import eu.gloria.rts2.http.Rts2SynchronizerMessage;
 import eu.gloria.rts2.http.Rts2GatewayDevicePropertiesRequest.RequestType;
 import eu.gloria.tools.configuration.Config;
+import eu.gloria.tools.conversion.DegreeFormat;
 import eu.gloria.tools.log.LogUtil;
 import eu.gloria.tools.runtime.ExecResult;
 import eu.gloria.tools.runtime.Executor;
 import eu.gloria.tools.thread.context.ContextSynchronizer;
+import eu.gloria.tools.time.DateTools;
 import eu.gloria.tools.time.TimeOut;
 import eu.gloria.tools.uuid.UUIDGenerator;
 
@@ -93,6 +114,14 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 	private boolean exposureContinueModeOn;
 	
 	private RTIDBProxyConnection dbProxy;
+	
+	private double planetMin;
+	private double planetMax;
+	private double mMin;
+	private double mMax;
+	private double ngcMin;
+	private double ngcMax;
+	
 	
 	/**
 	 * Testing purpose.
@@ -122,9 +151,11 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		
 		CameraRTD camera = new CameraRTD();
 		camera.setDeviceId("C0");
-		camera.exposureTime = 1.0;
-		String UUID = camera.camStartExposure(true);
-		Thread.sleep(30000);
+		camera.fitsHeadModification("C:\\Users\\mclopez.ISA\\Downloads\\0000000e0000000120140307000001449bff27c6v001.fits", "0000000e0000000120140307000001449bff27c6v001.fits");
+//		camera.exposureTime = 1.0;
+//		String UUID = camera.camStartExposure(true);
+//		Thread.sleep(30000);
+		
 		
 	}
 	
@@ -152,6 +183,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		imageContext = new ExposureContext();
 		
 		exposureContinueModeOn = false;
+				
 		
 		
 	}
@@ -1642,12 +1674,19 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		while (true){
 			try{
 				prop =  ((CameraRTD) DeviceDiscoverer.getRTD(this.getDeviceId())).devGetDeviceProperty(propName);
-				filters.add(prop.getValue().get(0));
+								
+				if (DeviceRTD.configDeviceManager.getDevice(prop.getValue().get(0)) != null)
+					filters.add(prop.getValue().get(0));
+				else
+					LogUtil.info(this, "CameraRTD.camGetFilters() Filter: " + prop.getValue().get(0) + " isn't in environmet file");
+								
 				propName = propPre + propSuf;			
 				propSuf++;
 			}catch (Exception e){
 				if (e.getMessage().contains("The property does not exist")){
 					return filters;
+				}else{
+					throw new RTException (e.getMessage());
 				}
 			}
 		}
@@ -1799,16 +1838,20 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 	@Override
 	public String camStartContinueMode() throws RTException {
 		
-		this.exposureContinueModeOn = true;
-
-		return UUID_IMG_CONTINUE_MODE;
+		throw new UnsupportedOpException ("Operation not supported");
+		
+//		this.exposureContinueModeOn = true;
+//
+//		return UUID_IMG_CONTINUE_MODE;
 		
 	}
 
 	@Override
 	public void camStopContinueMode() throws RTException {
+		
+		throw new UnsupportedOpException ("Operation not supported");
 
-		this.exposureContinueModeOn = false;
+//		this.exposureContinueModeOn = false;
 		
 	}
 
@@ -1914,6 +1957,136 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		return publicPath.getDefaultValue();
 	}
 	
+	@Override
+	public List<Double> camGetObjectExposureTime(String filter, String object) throws RTException {
+		
+		List<Double> result = null;
+		
+		double longitude = Config.getPropertyDouble("rt_config", "rts_longitude");
+		double latitude = Config.getPropertyDouble("rt_config", "rts_latitude");		
+
+		Catalogue catalogue = new Catalogue(longitude, latitude, 0);
+		ObjInfo objInfo = catalogue.getObject(object);
+		if (objInfo == null){
+			
+			LogUtil.info(this, "Camera. Catalogue:: Object NOT found:" + object);
+			throw new RTException("Not Object Found");
+			
+		}else{
+			
+			LogUtil.info(this, "Mount. Catalogue:: Object found:" + object);				
+			
+			String general = null;
+			double generalMin = 0;
+			double generalMax = 0;
+			try{
+				general = DeviceRTD.configDeviceManager.getProperty(getDeviceId(), "GENERAL_EXP").getDefaultValue();
+				String[] dataGeneral = general.split(":");		
+				generalMin = Double.valueOf(dataGeneral[0]);
+				generalMax = Double.valueOf(dataGeneral[1]);
+			} catch (Exception e){
+				
+			}
+			
+					
+			if (objInfo.getCategory() == ObjCategory.MajorPlanetAndMoon){
+				String planet = null;
+				eu.gloria.rt.entity.environment.config.device.DeviceProperty planetProperty = DeviceRTD.configDeviceManager.getProperty(getDeviceId(), "PLANET_EXP");
+
+				if (planetProperty == null){
+					if (general != null){
+						result = new ArrayList <Double> ();
+						
+						result.add(generalMin);
+						result.add(generalMax);
+					}else
+						return result;
+				}
+				
+				planet = planetProperty.getDefaultValue();
+				String[] dataPlanet = planet.split(":");		
+				planetMin = Double.valueOf(dataPlanet[0]);
+				planetMax = Double.valueOf(dataPlanet[1]);
+				
+				result = new ArrayList <Double> ();
+				
+				result.add(planetMin);
+				result.add(planetMax);
+				
+			}else if (objInfo.getCategory() == ObjCategory.OutsideSSystemObj){
+				String[] data = object.split(" ");
+				
+				int index = 0;
+				for (String a : data){
+					if (a.isEmpty())
+						index++;
+					else
+						break;
+				}
+				
+				if (data[index].toUpperCase().startsWith("M")){	//Messier
+					String messier = null ;
+					eu.gloria.rt.entity.environment.config.device.DeviceProperty messierProperty = DeviceRTD.configDeviceManager.getProperty(getDeviceId(), "MESSIER_EXP");
+					if (messierProperty == null){
+						if (general != null){
+							result = new ArrayList <Double> ();
+							
+							result.add(generalMin);
+							result.add(generalMax);
+						}
+						return result;
+					}
+					
+					messier = messierProperty.getDefaultValue();
+					String[] dataMessier = messier.split(":");		
+					mMin = Double.valueOf(dataMessier[0]);
+					mMax = Double.valueOf(dataMessier[1]);
+
+					result = new ArrayList <Double> ();
+
+					result.add(mMin);
+					result.add(mMax);
+					
+					
+				}else if (data[index].toUpperCase().startsWith("NGC")){	//NGC
+					String ngc = null;
+					eu.gloria.rt.entity.environment.config.device.DeviceProperty ngcProperty = DeviceRTD.configDeviceManager.getProperty(getDeviceId(), "NGC_EXP");
+					if (ngcProperty == null){	
+						
+						if (general != null){
+							result = new ArrayList <Double> ();
+							
+							result.add(generalMin);
+							result.add(generalMax);
+						}
+						return result;
+					}
+					
+					ngc = ngcProperty.getDefaultValue();
+					String[] dataNgc = ngc.split(":");		
+					ngcMin = Double.valueOf(dataNgc[0]);
+					ngcMax = Double.valueOf(dataNgc[1]);
+
+					result = new ArrayList <Double> ();
+
+					result.add(ngcMin);
+					result.add(ngcMax);
+					
+				}else if (general != null){
+					result = new ArrayList <Double> ();
+					
+					result.add(generalMin);
+					result.add(generalMax);
+				}
+				
+			}
+			
+			
+		}
+		
+		return result;
+	}
+	
 
 	private void transferFileBasedOnXMLRPC (String UUID) throws RTException{
 		
@@ -1997,7 +2170,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 			Rts2GatewayDevicePropertiesRequest propReq = new Rts2GatewayDevicePropertiesRequest(RequestType.CUSTOM, valueProp);
 			Rts2CmdGetResponse resp = new Rts2CmdGetResponse(jsonContent, propReq);				
 			
-			localPath = resp.getVars().get(0).getValue().get(0);
+			localPath = resp.getVars().get(0).getValue().get(0).replaceFirst("/", "");
 			
 			eu.gloria.rt.entity.environment.config.device.DeviceProperty privatePath = DeviceRTD.configDeviceManager.getProperty(this.getDeviceId(), "PRIVATE_PATH");
 			
@@ -2027,7 +2200,17 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 			
 			Boolean rtdLocal = Boolean.parseBoolean(Config.getProperty("rtd_rts2","rtd.local"));
 			
-			if (rtdLocal){			
+			if (rtdLocal){		
+				localPath = resp.getVars().get(0).getValue().get(0);
+				
+				try{
+					fitsHeadModification(localPath, UUID + ".fits");
+				}catch(Exception ex){
+					ex.printStackTrace();
+					LogUtil.severe(this, "CameraRTD.transferFileBasedOnXMLRPC2(). Error changing fits head=[" + localPath + "]");
+				}
+				
+				
 				fileToRepository(localPath);
 			}else{
 			
@@ -2054,6 +2237,13 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 
 				out.write(response);
 				out.close();
+				
+				try{
+					fitsHeadModification(privatePath.getDefaultValue()+UUID + ".fits", UUID + ".fits");
+				}catch(Exception ex){
+					ex.printStackTrace();
+					LogUtil.severe(this, "CameraRTD.transferFileBasedOnXMLRPC2(). Error changing fits head=[" + privatePath.getDefaultValue() + "]");
+				}
 
 				fileToRepository(privatePath.getDefaultValue()+ UUID + ".fits");
 			
@@ -2062,6 +2252,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 			imageContext.setTransfer(TransferStatus.FINISHED);
 		
 		}catch (Exception e) {
+			e.printStackTrace();
 			imageContext.setTransfer(TransferStatus.FAILED);
 			throw new RTException("Image path cannot be recovered. " + e.getMessage());
 		}
@@ -2071,6 +2262,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 	
 	private void fileToRepository (String path) throws RTException{
 				
+		LogUtil.info(this, "CameraRTD.fileToRepository");
 		
 		String idOp = OpManager.getOpManager().getExtExecInfo().getUuidOp();
 		
@@ -2146,8 +2338,10 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
             	
 //			}
 			
-		} catch (Exception ex) {			
-			DBUtil.rollback(em);			
+		} catch (Exception ex) {
+			ex.printStackTrace();
+			DBUtil.rollback(em);	
+			LogUtil.severe(this, "CameraRTD.fileToRepository  ERROR" +ex.getMessage());
 			throw new RTException(ex.getMessage());
 			
 		} finally {
@@ -2325,6 +2519,113 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		return result;
 	}
 	
+
+	private void fitsHeadModification(String fitsFilefullPath, String fitsFileName) throws Exception{
+		
+		//Get the header in order to transform it.
+		DataInputStream dis = new DataInputStream( new BufferedInputStream( new FileInputStream(fitsFilefullPath) ) );
+		FitsHeader headerfile = new FitsHeader(dis);
+		
+		//It is already in RTS2 fits
+//		headerfile.insertKeywordAt(new FitsKeyword("SIMPLE", true, "FITS Standard"), 5);
+		
+		headerfile.insertKeywordAt(new FitsKeyword("NAME", fitsFileName, "Name file"), 5);
+		
+		//Telescope
+		String telescopeName = Config.getProperty("rt_config","rts_name");
+		headerfile.insertKeywordAt(new FitsKeyword("TELESCOP", telescopeName, "Telescope name"), 6);
+				
+		//user
+		eu.gloria.rtc.op.OpInfo opInfo = OpManager.getOpManager().getOp();
+		String user = opInfo.getUser();
+		if (user== null || user.isEmpty()) user= "GLORIA";
+		headerfile.insertKeywordAt(new FitsKeyword("OBSERVER", user, "User name"), 7);
+		
+		//Object
+		List<eu.gloria.rt.entity.environment.config.device.Device> mountIds = DeviceRTD.configDeviceManager.getDeviceByType (DeviceType.MOUNT);
+		if (mountIds.size() > 1)
+			throw new Exception ("CameraRTD.fitsHeadModification().Error recovering the mount.");
+		
+		RTDMountInterface mount = (RTDMountInterface) DeviceDiscoverer.getRTD(mountIds.get(0).getShortName());
+		String pointedObject = mount.mntGetPointedObject();
+		LogUtil.info(this, "CameraRTD.fitsHeadModification(). Pointed Object Name:" + pointedObject);
+		headerfile.insertKeywordAt(new FitsKeyword("OBJECT", pointedObject, "Object name given by the user"), 8);
+		
+		//FilterWheel		
+		List<String> filters = camGetFilters();
+		int index = 9;
+		if (filters.isEmpty()){
+			headerfile.insertKeywordAt(new FitsKeyword("FILTER", "OPEN", "Type of filter used"), index);
+			index++;
+		}else{	
+			char prefix = ' ';
+			for (String filter : filters){
+				RTDFilterWheelInterface filterRTD = (RTDFilterWheelInterface) DeviceDiscoverer.getRTD(filter);
+				if (prefix == ' '){
+					headerfile.insertKeywordAt(new FitsKeyword("FILTER", filterRTD.fwGetFilterKind(), "Type of filter used"), index);				
+					prefix='A';
+				}else{
+					headerfile.insertKeywordAt(new FitsKeyword("FILTER"+prefix, filterRTD.fwGetFilterKind(), "Type of filter used"), index);
+				}
+				prefix++;			
+				index++;
+			}		
+		}
+		
+		//Exposure time
+		double exposureTime = camGetExposureTime();
+		headerfile.insertKeywordAt(new FitsKeyword("EXPTIME", exposureTime, "Exposure time in seconds"), index);
+		index++;
+		
+		//DateTime 
+		Date now = new Date();
+		Date gmtNow = DateTools.getGMT(now);
+		String date = DateTools.getDate(gmtNow, "yyyy-MM-dd");
+		String time = DateTools.getDate(gmtNow, "HH:mm:ss");
+		String dateTime = date + "T" + time;
+		headerfile.insertKeywordAt(new FitsKeyword("DAT-OBS", dateTime, "UT start of exposure"), index);
+		index++;
+		
+		//Observatory
+		headerfile.insertKeywordAt(new FitsKeyword("LAT", Config.getProperty("rt_config", "rts_latitude"), "Latitude"), index);
+		index++;
+		headerfile.insertKeywordAt(new FitsKeyword("LNG", Config.getProperty("rt_config", "rts_longitude"), "Longitude"), index);
+		index++;
+		
+		//RADEC position
+		String ra = null;
+		String dec = null;
+		try{
+			ra = String.valueOf(mount.mntGetPosAxis1());
+			dec = String.valueOf(mount.mntGetPosAxis2());
+		}catch (RTException e){
+			ra = "unknown";
+			dec = "unknown";
+			LogUtil.info(this, "CameraRTD.fitsHeadModification(). Error recovering the RADEC position");
+		}
+		headerfile.insertKeywordAt(new FitsKeyword("RA", ra, "RA coordenate"), index);
+		index++;
+		headerfile.insertKeywordAt(new FitsKeyword("DEC", dec, "DEC coordenate"), index);
+		index++;
+		
+		//TYPE
+		headerfile.insertKeywordAt(new FitsKeyword("IMAGETYP", "SKY", "Type of Image"), index);
+		index++;		
+		
+		
+					
+		// Obtain the rest of the image data.
+		FitsData v = new FitsData(headerfile,dis,true);
+		dis.close();
+		FitsHDUnit p = new FitsHDUnit(headerfile,v);
+		DataOutputStream dos = new DataOutputStream( new BufferedOutputStream( new FileOutputStream(fitsFilefullPath) ) );
+		
+		// Write a new file with the header modified and the same image data.
+		p.writeFile(dos);
+		dos.close();
+		
+	}
+	
 	/**
 	 * Blocks until RTS2 camera starts the exposure process. KK
 	 * @author jcabello
@@ -2402,7 +2703,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		public Task(double exposureTime){
 			
 			int exposureTimeSegs = ((int) exposureTime) + 1;
-			this.timeOut = new TimeOut((exposureTimeSegs * 1000) + 20000); //Exposure time + 20 segs.
+			this.timeOut = new TimeOut((exposureTimeSegs * 1000) + 40000); //Exposure time + 40 segs.
 			this.running = false;
 			
 		}
@@ -2532,5 +2833,7 @@ public class CameraRTD extends DeviceRTD implements	RTDCameraInterface{
 		FINISHED,
 		FAILED
 	}
+
+	
 
 }

@@ -2,6 +2,7 @@ package eu.gloria.rts2.rtd;
 
 import java.util.List;
 
+import eu.gloria.rt.entity.device.ActivityState;
 import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
@@ -79,20 +80,26 @@ public class DavisRainSensorRTD extends DeviceRTD implements RTDRainDetectorInte
 		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
 		
 		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
+		
+		if (parent.getAlarmState()== AlarmState.NONE){
+			dev.setAlarmState(getAlarmState());
+		}
+				
 		dev.setActivityState(parent.getActivityState());
 		dev.setCommunicationState(parent.getCommunicationState());
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (dev.getAlarmState() == AlarmState.NONE){
-			if (allProperties){
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (dev.getAlarmState() == AlarmState.NONE){
+				if (allProperties){
 
-				DeviceProperty devProperty = new DeviceProperty();
-				devProperty = devGetDeviceProperty("RAIN");
+					DeviceProperty devProperty = new DeviceProperty();
+					devProperty = devGetDeviceProperty("RAIN");
 
-				dev.getProperties().add(devProperty);
+					dev.getProperties().add(devProperty);
 
+				}
 			}
 		}
 		return dev;
@@ -120,22 +127,41 @@ public class DavisRainSensorRTD extends DeviceRTD implements RTDRainDetectorInte
 		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
 		
 		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
+		
+		if (parent.getAlarmState()== AlarmState.NONE){
+			dev.setAlarmState(getAlarmState());
+		}else{
+			dev.setAlarmState(parent.getAlarmState());
+		}	
+		
 		dev.setActivityState(parent.getActivityState());
 		dev.setCommunicationState(parent.getCommunicationState());
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (propertyNames.contains("rain")){
-			
-			DeviceProperty devProperty = new DeviceProperty();
-			devProperty = devGetDeviceProperty("RAIN");
-			
-			dev.getProperties().add(devProperty);
-			
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (propertyNames.contains("rain")){
+
+				DeviceProperty devProperty = new DeviceProperty();
+				devProperty = devGetDeviceProperty("RAIN");
+
+				dev.getProperties().add(devProperty);
+
+			}
 		}
 		
 		return dev;
 	}
 
+	private AlarmState getAlarmState() throws RTException{
+		
+				
+		if (rndIsRaining()){
+			return AlarmState.WEATHER;
+		}else{
+			return AlarmState.NONE;
+		}
+		
+		
+	}
 }

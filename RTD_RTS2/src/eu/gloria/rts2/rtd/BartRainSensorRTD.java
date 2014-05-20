@@ -1,10 +1,12 @@
 package eu.gloria.rts2.rtd;
 
+import java.util.ArrayList;
 import java.util.List;
 
 import eu.gloria.rt.entity.device.ActivityState;
 import eu.gloria.rt.entity.device.ActivityStateDome;
 import eu.gloria.rt.entity.device.ActivityStateDomeOpening;
+import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
 import eu.gloria.rt.entity.device.DeviceDome;
@@ -25,6 +27,17 @@ import eu.gloria.rts2.http.Rts2GatewayDeviceManager;
  *
  */
 public class BartRainSensorRTD extends DeviceRTD implements RTDRainDetectorInterface {
+
+	public static void main(String[] args){	
+		
+		BartRainSensorRTD dev = new BartRainSensorRTD();
+		try {
+			dev.devGetDevice(false);
+		} catch (RTException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
 
 	public BartRainSensorRTD() {
 		// TODO Auto-generated constructor stub
@@ -70,93 +83,54 @@ public class BartRainSensorRTD extends DeviceRTD implements RTDRainDetectorInter
 		
 	}
 	
-	/*@Override
+	
 	public Device devGetDevice(boolean allProperties)  throws RTException{
 		
-		DeviceGeneral dev = new DeviceGeneral();
+		DeviceGeneral dev = null;
 		
-		//sets the type
-		dev.setType(DeviceType.RAIN_SENSOR);
-		//Description
-		dev.setDescription("RTS2-unavailable");
-		//Info
-		dev.setInfo("RTS2-unavailable");
-		//ShortName
-		dev.setShortName(getDeviceId());
-		//Version
-		dev.setVersion("RTS2-unavailable");
-		
-		//Recover the parent device information
-		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
-		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getDeviceId(), null);
-		//DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
-		
-		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
-		dev.setActivityState(parent.getActivityState());
-		dev.setCommunicationState(parent.getCommunicationState());
-		dev.setActivityStateDesc(parent.getActivityStateDesc());
-		
-		
-		//Properties
-		if (allProperties){
+		if (!allProperties){
+			List<String> propertyNames = new ArrayList<String> ();
+			propertyNames.add("rain");
 			
-			List <DeviceProperty> devProperties = null;
-			
-			DeviceProperty devProperty = new DeviceProperty();
-			devProperty = devGetDeviceProperty("rain");
-			devProperties.add(devProperty);			
-				
-			
-			dev.getProperties().addAll(devProperties);
-			
+			dev = (DeviceGeneral) super.getDevice(propertyNames);		
+		}else{
+			dev = (DeviceGeneral) super.devGetDevice(allProperties);
 		}
 		
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (dev.getAlarmState() == AlarmState.NONE){
+				for (DeviceProperty prop: dev.getProperties()){
+					if (prop.getName().equals("rain"))
+						if (prop.getValue().get(0).equals("1"))
+							dev.setAlarmState(AlarmState.WEATHER);
+				}			
+			}
+		}
+		
+		
 		return dev;
-	}*/
+	}
 	
 	
-	/*@Override
+	
 	public Device getDevice(List<String> propertyNames) throws RTException {
 		
-		DeviceGeneral dev = new DeviceGeneral();
+		if (!propertyNames.contains("rain"))
+			propertyNames.add("rain");
 		
-		//sets the type
-		dev.setType(DeviceType.RAIN_SENSOR);
-		//Description
-		dev.setDescription("RTS2-unavailable");
-		//Info
-		dev.setInfo("RTS2-unavailable");
-		//ShortName
-		dev.setShortName(getDeviceId());
-		//Version
-		dev.setVersion("RTS2-unavailable");
+		DeviceGeneral dev = (DeviceGeneral) super.getDevice(propertyNames);
 		
-		//Recover the parent device information
-		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
-		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getDeviceId(), null);
-		//DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
-				
-		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
-		dev.setActivityState(parent.getActivityState());
-		dev.setCommunicationState(parent.getCommunicationState());
-		dev.setActivityStateDesc(parent.getActivityStateDesc());
-				
-		//Properties
-		List <DeviceProperty> devProperties = null;
-		DeviceProperty devProperty = new DeviceProperty();
-		
-		if (propertyNames.contains("rain")){
-			
-			devProperty = devGetDeviceProperty("rain");
-			devProperties.add(devProperty);
-		
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (dev.getAlarmState() == AlarmState.NONE){
+				for (DeviceProperty prop: dev.getProperties()){
+					if (prop.getName().equals("rain"))
+						if (prop.getValue().equals("1"))
+							dev.setAlarmState(AlarmState.WEATHER);
+				}			
+			}
 		}
 		
-		dev.getProperties().addAll(devProperties);
-		
 		return dev;
-	}*/
+	}
 
 }

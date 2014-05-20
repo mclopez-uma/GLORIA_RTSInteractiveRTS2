@@ -3,6 +3,7 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.ActivityState;
 import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
@@ -27,6 +28,19 @@ import eu.gloria.rts2.http.Rts2Messages;
  */
 public class BARTD50_OutRHSensorRTD extends DeviceRTD implements RTDRHSensorInterface {
 
+	public static void main(String[] args){	
+		
+		BARTD50_OutRHSensorRTD dev = new BARTD50_OutRHSensorRTD();
+		try {
+			dev.devGetDevice(false);
+		} catch (RTException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
+	private AlarmState previousAlarm = null;
+	
 	@Override
 	public MeasureUnit rhsGetMeasureUnit() throws RTException {
 		
@@ -75,24 +89,45 @@ public class BARTD50_OutRHSensorRTD extends DeviceRTD implements RTDRHSensorInte
 		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
 		
 		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
+		
+		if (parent.getActivityState() != ActivityState.ERROR){
+			if (parent.getAlarmState()== AlarmState.NONE){
+				AlarmState alarm = getAlarmState();	
+				if (alarm != null){
+					dev.setAlarmState(getAlarmState());
+					previousAlarm = alarm;
+				}else{
+					if (previousAlarm == null) //First time value within margins
+						dev.setAlarmState(AlarmState.NONE);
+					else
+						dev.setAlarmState(previousAlarm);
+				}
+			}else{
+				dev.setAlarmState(parent.getAlarmState());
+			}
+		}else{
+			dev.setAlarmState(parent.getAlarmState());
+		}
+		
 		dev.setActivityState(parent.getActivityState());
 		dev.setCommunicationState(parent.getCommunicationState());
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
+				
 		
 		//Properties
-		if (dev.getAlarmState() == AlarmState.NONE){
-			if (allProperties){
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (dev.getAlarmState() == AlarmState.NONE){
+				if (allProperties){
 
-				List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
+					List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();
 
-				DeviceProperty devProperty = new DeviceProperty();
-				devProperty = devGetDeviceProperty("HUM_OUT");
-				devProperties.add(devProperty);
-					
+					DeviceProperty devProperty = new DeviceProperty();
+					devProperty = devGetDeviceProperty("HUM_OUT");
+					devProperties.add(devProperty);					
 
-				dev.getProperties().addAll(devProperties);
+					dev.getProperties().addAll(devProperties);
 
+				}
 			}
 		}
 		
@@ -106,4 +141,21 @@ public class BARTD50_OutRHSensorRTD extends DeviceRTD implements RTDRHSensorInte
 		return devGetDevice(true);
 	}
 
+	private AlarmState getAlarmState() throws RTException{
+		
+		DeviceProperty trigBad = this.devGetDeviceProperty("HUM_TRIGBAD");
+		if (!trigBad.getValue().isEmpty()){
+			DeviceProperty trigGood = this.devGetDeviceProperty("HUM_TRIGGOOD");
+			if (!trigGood.getValue().isEmpty()){
+				double measure = rhsGetMeasure();
+
+				if (measure > Double.parseDouble(trigBad.getValue().get(0))){
+					return AlarmState.WEATHER;
+				}else if (measure < Double.parseDouble(trigGood.getValue().get(0))){
+					return AlarmState.NONE;
+				}
+			}
+		}
+		return null;
+	}
 }

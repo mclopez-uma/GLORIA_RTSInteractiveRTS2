@@ -3,6 +3,8 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.ActivityState;
+import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
 import eu.gloria.rt.entity.device.DeviceGeneral;
@@ -26,6 +28,8 @@ import eu.gloria.rts2.http.Rts2Messages;
  */
 public class MrakCloudDetectorSensorRTD extends DeviceRTD implements RTDCloudDetectorInterface {
 
+	private AlarmState previousAlarm = null;
+	
 	@Override
 	public MeasureUnit cldGetMeasureUnit() throws RTException {
 		
@@ -148,106 +152,97 @@ public class MrakCloudDetectorSensorRTD extends DeviceRTD implements RTDCloudDet
 		return  intervals;
 	}
 	
-//	@Override
-//	public Device devGetDevice(boolean allProperties)  throws RTException{
-//		
-//		DeviceGeneral dev = new DeviceGeneral();
-//		
-//		//sets the type
-//		dev.setType(DeviceType.CLOUD_DETECTOR);
-//		//Description
-//		dev.setDescription("RTS2-unavailable");
-//		//Info
-//		dev.setInfo("RTS2-unavailable");
-//		//ShortName
-//		dev.setShortName(getDeviceId());
-//		//Version
-//		dev.setVersion("RTS2-unavailable");
-//		
-//		//Recover the parent device information
-//		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
-//		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
-//		
-//		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-//		dev.setAlarmState(parent.getAlarmState());		
-//		dev.setActivityState(parent.getActivityState());
-//		dev.setCommunicationState(parent.getCommunicationState());
-//		dev.setActivityStateDesc(parent.getActivityStateDesc());
-//		
-//		//Properties
-//		if (allProperties){
-//			
-//			DeviceProperty devProperty = new DeviceProperty();
-//			devProperty = devGetDeviceProperty("TEMP_DIFF");
-//			
-//			dev.getProperties().add(devProperty);
-//			
-//			devProperty = new DeviceProperty();
-//			devProperty = devGetDeviceProperty("TRIGGOOD");
-//			
-//			dev.getProperties().add(devProperty);
-//			
-//			devProperty = new DeviceProperty();
-//			devProperty = devGetDeviceProperty("TRIGBAD");
-//			
-//			dev.getProperties().add(devProperty);
-//			
-//		}
-//		
-//		return dev;
-//	}
+
+	public Device devGetDevice(boolean allProperties)  throws RTException{
+
+		DeviceGeneral dev = null;
+		
+		if (!allProperties){
+			List<String> propertyNames = new ArrayList<String> ();
+			propertyNames.add("TRIGBAD");
+			propertyNames.add("TRIGGOOD");
+			propertyNames.add("TEMP_DIFF");
+			
+			dev = (DeviceGeneral) super.getDevice(propertyNames);		
+		}else{
+			dev = (DeviceGeneral) super.devGetDevice(allProperties);
+		}
+	
+		
+		if (dev.getActivityState() != ActivityState.ERROR){
+			AlarmState alarm = getAlarmState(dev.getProperties());	
+			if (alarm != null){
+				dev.setAlarmState(getAlarmState(dev.getProperties()));
+				previousAlarm = alarm;
+			}else{
+				if (previousAlarm == null) //First time value within margins
+					dev.setAlarmState(AlarmState.NONE);
+				else
+					dev.setAlarmState(previousAlarm);
+			}
+		}
+		
+		
+		
+		return dev;
+
+	}
 	
 	
-//	@Override
-//	public Device getDevice(List<String> propertyNames) throws RTException {
-//		
-//		DeviceGeneral dev = new DeviceGeneral();
-//		
-//		//sets the type
-//		dev.setType(DeviceType.CLOUD_DETECTOR);
-//		//Description
-//		dev.setDescription("RTS2-unavailable");
-//		//Info
-//		dev.setInfo("RTS2-unavailable");
-//		//ShortName
-//		dev.setShortName(getDeviceId());
-//		//Version
-//		dev.setVersion("RTS2-unavailable");
-//		
-//		//Recover the parent device information
-//		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
-//		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
-//		
-//		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-//		dev.setAlarmState(parent.getAlarmState());		
-//		dev.setActivityState(parent.getActivityState());
-//		dev.setCommunicationState(parent.getCommunicationState());
-//		dev.setActivityStateDesc(parent.getActivityStateDesc());
-//		
-//		//Properties
-//		if (propertyNames.contains("TEMP_DIFF")){
-//			
-//			DeviceProperty devProperty = new DeviceProperty();
-//			devProperty = devGetDeviceProperty("TEMP_DIFF");
-//			
-//			dev.getProperties().add(devProperty);
-//			
-//		}else if (propertyNames.contains("TRIGGOOD")){
-//			
-//			DeviceProperty devProperty = new DeviceProperty();
-//			devProperty = devGetDeviceProperty("TRIGGOOD");
-//			
-//			dev.getProperties().add(devProperty);
-//			
-//		}else if (propertyNames.contains("TRIGBAD")){
-//			
-//			DeviceProperty devProperty = new DeviceProperty();
-//			devProperty = devGetDeviceProperty("TRIGBAD");
-//			
-//			dev.getProperties().add(devProperty);
-//			
-//		}
-//		
-//		return dev;
-//	}
+	@Override
+	public Device getDevice(List<String> propertyNames) throws RTException {
+
+		Device dev = devGetDevice(false);
+		
+		//if (dev.getAlarmState() == AlarmState.NONE){
+			AlarmState alarm = getAlarmState(dev.getProperties());	
+			if (alarm != null){
+				dev.setAlarmState(getAlarmState(dev.getProperties()));
+				previousAlarm = alarm;
+			}else{
+				if (previousAlarm == null) //First time value within margins
+					dev.setAlarmState(AlarmState.NONE);
+				else
+					dev.setAlarmState(previousAlarm);
+			}
+		//}
+		
+		return dev;
+	}
+	
+	private AlarmState getAlarmState(List<DeviceProperty> properties) throws RTException{
+		
+		Double trigBad=null, trigGood=null, measure=null;
+		for (DeviceProperty prop: properties){				
+			if (prop.getName().equals("TRIGBAD")){
+				if (!prop.getValue().isEmpty()){
+					trigBad=Double.parseDouble(prop.getValue().get(0));
+				}else{
+					return null;
+				}
+			}
+			if (prop.getName().equals("TRIGGOOD")){
+				if (!prop.getValue().isEmpty()){
+					trigGood=Double.parseDouble(prop.getValue().get(0));
+				}else{
+					return null;
+				}
+			}
+			if (prop.getName().equals("TEMP_DIFF")){
+				if (!prop.getValue().isEmpty()){
+					measure=Double.parseDouble(prop.getValue().get(1));
+				}else{
+					return null;
+				}
+			}
+		}			
+		
+		if (measure < trigBad){
+			return AlarmState.WEATHER;
+		}else if (measure > trigGood){
+			return AlarmState.NONE;
+		}
+		
+		return null;
+	}
 }

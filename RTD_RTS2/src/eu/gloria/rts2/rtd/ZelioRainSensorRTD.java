@@ -89,7 +89,7 @@ public class ZelioRainSensorRTD extends DeviceRTD implements RTDRainDetectorInte
 		DeviceDome parent = (DeviceDome) manager.getDevice(getParentDeviceId(), null);
 
 		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());
+		
 
 		if (parent.getActivityStateOpening() == ActivityStateDomeOpening.CLOSE)
 			dev.setActivityState(ActivityState.READY);
@@ -108,20 +108,24 @@ public class ZelioRainSensorRTD extends DeviceRTD implements RTDRainDetectorInte
 		dev.setCommunicationState(parent.getCommunicationState());
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
-		//Properties
-		
-		
-		if (dev.getAlarmState() == AlarmState.NONE){
-			if (allProperties){
+		//Properties	
+		if (parent.getActivityState() != ActivityStateDome.ERROR){
+			if (parent.getAlarmState() == AlarmState.NONE){
 
 				DeviceProperty devProperty = new DeviceProperty();
 				devProperty = devGetDeviceProperty("rain");
 
+				if (devProperty.getValue().get(0).equals("1"))
+					dev.setAlarmState(AlarmState.WEATHER);
+
 				dev.getProperties().add(devProperty);
 
+			}else{
+				dev.setAlarmState(parent.getAlarmState());
 			}
+		}else{
+			dev.setAlarmState(parent.getAlarmState());
 		}
-		
 		return dev;
 	}
 	
@@ -129,53 +133,7 @@ public class ZelioRainSensorRTD extends DeviceRTD implements RTDRainDetectorInte
 	@Override
 	public Device getDevice(List<String> propertyNames) throws RTException {
 		
-		DeviceGeneral dev = new DeviceGeneral();
-		
-		//sets the type
-		dev.setType(DeviceType.RAIN_SENSOR);
-		//Description
-		dev.setDescription("RTS2-unavailable");
-		//Info
-		dev.setInfo("RTS2-unavailable");
-		//ShortName
-		dev.setShortName(getDeviceId());
-		//Version
-		dev.setVersion("RTS2-unavailable");
-		
-		//Recover the parent device information
-		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
-		DeviceDome parent = (DeviceDome) manager.getDevice(getParentDeviceId(), null);
-		
-		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());
-		
-		if (parent.getActivityStateOpening() == ActivityStateDomeOpening.CLOSE)
-			dev.setActivityState(ActivityState.READY);
-		else if (parent.getActivityStateOpening() == ActivityStateDomeOpening.CLOSING)
-			dev.setActivityState(ActivityState.READY);
-		else if (parent.getActivityStateOpening() == ActivityStateDomeOpening.OPEN)
-			dev.setActivityState(ActivityState.READY);
-		else if (parent.getActivityStateOpening() == ActivityStateDomeOpening.OPENING)
-			dev.setActivityState(ActivityState.READY);
-		else if (parent.getActivityStateOpening() == ActivityStateDomeOpening.PARTS_COMPOSITION)
-			dev.setActivityState(ActivityState.READY);
-		else
-			dev.setActivityState(ActivityState.valueOf(parent.getActivityStateOpening().toString()));				
-		
-		dev.setCommunicationState(parent.getCommunicationState());
-		dev.setActivityStateDesc(parent.getActivityStateDesc());
-		
-		//Properties
-		if (propertyNames.contains("RAIN")){
-
-			DeviceProperty devProperty = new DeviceProperty();
-			devProperty = devGetDeviceProperty("RAIN");
-
-			dev.getProperties().add(devProperty);
-
-		}
-
-		return dev;
+		return devGetDevice(false);
 		
 	}
 

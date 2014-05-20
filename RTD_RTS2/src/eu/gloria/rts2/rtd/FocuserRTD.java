@@ -74,7 +74,11 @@ public class FocuserRTD extends DeviceRTD implements RTDFocuserInterface {
 	@Override
 	public long focGetMaxStep() throws RTException {
 
-		throw new UnsupportedOpException ("Operation not supported");
+		DeviceProperty property = this.devGetDeviceProperty("FOC_TAR");
+		
+		return Math.round((Double.valueOf(property.getMinmax().get(1))));
+		
+
 	}
 	
 	
@@ -221,6 +225,14 @@ public class FocuserRTD extends DeviceRTD implements RTDFocuserInterface {
 		} catch (Exception e) {
 			throw new RTException("No camera attached. " + e.getMessage());
 		}
+	}
+
+	@Override
+	public long focGetMinStep() throws RTException {
+
+		DeviceProperty property = this.devGetDeviceProperty("FOC_TAR");
+		
+		return Math.round((Double.valueOf(property.getMinmax().get(0))));
 	}
 	
 

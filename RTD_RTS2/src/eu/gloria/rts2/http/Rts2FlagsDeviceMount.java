@@ -36,43 +36,7 @@ public class Rts2FlagsDeviceMount extends Rts2FlagsDevice  {
 		//By default -> OFF
 		activityState = ActivityStateMount.OFF;
 		
-		//Checking  MISC STATE
-		if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_SC_CURR){
-			activityState = ActivityStateMount.BUSY;
-		}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_NEED_RELOAD){
-			activityState = ActivityStateMount.BUSY;
-		}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_STARTUP){
-			activityState = ActivityStateMount.BUSY;
-		}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_SHUTDOWN){
-			activityState = ActivityStateMount.BUSY;
-		}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_IDLE){
-			activityState = ActivityStateMount.READY;
-		}					
-		
-		
-		//Additional information (OBSERVING, MOVING, PARKED, PARKING). The CUP will not be take into account (consider as another device)
-		long movementValueToCompare = (flags & Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_MASK);
-		if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_OBSERVING){
-			activityState = ActivityStateMount.STOP;
-			statusDesc.add("The Mount is stopped.");
-		}else if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_MOVING){
-			activityState = ActivityStateMount.MOVING;
-			statusDesc.add("The Mount is moving.");
-		}else if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_PARKED){
-			activityState = ActivityStateMount.PARKED;
-			statusDesc.add("The Mount is parked.");
-		}else if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_PARKING){
-			activityState = ActivityStateMount.PARKING;
-			statusDesc.add("The Mount is parking.");
-		}
-		
-		//TRACKING...
-		long trackValueToCompare = (flags & Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_TRACK_MASK);
-		if (trackValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_TRACK_TRACKING){
-			activityState = ActivityStateMount.TRACKING;
-			statusDesc.add("The Mount is tracking.");
-		}
-		
+				
 		//Checking  ERROR STATE
 		if (errorValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_ERROR_NO){
 			activityState = ActivityStateMount.READY;
@@ -88,6 +52,45 @@ public class Rts2FlagsDeviceMount extends Rts2FlagsDevice  {
 			statusDesc.add("The device is not ready.");
 		}		
 		
+		if (activityState!=ActivityStateMount.ERROR){
+			//Checking  MISC STATE
+			if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_SC_CURR){
+				activityState = ActivityStateMount.BUSY;
+			}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_NEED_RELOAD){
+				activityState = ActivityStateMount.BUSY;
+			}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_STARTUP){
+				activityState = ActivityStateMount.BUSY;
+			}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_SHUTDOWN){
+				activityState = ActivityStateMount.BUSY;
+			}else if (miscValueToCompare == Rts2Constants.RTS2_DEVICE_FLAG_MISCELLANEOUS_IDLE){
+				activityState = ActivityStateMount.READY;
+			}					
+
+
+			//Additional information (OBSERVING, MOVING, PARKED, PARKING). The CUP will not be taken into account (consider as another device)
+			long movementValueToCompare = (flags & Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_MASK);
+			if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_OBSERVING){
+				activityState = ActivityStateMount.STOP;
+				statusDesc.add("The Mount is stopped.");
+			}else if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_MOVING){
+				activityState = ActivityStateMount.MOVING;
+				statusDesc.add("The Mount is moving.");
+			}else if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_PARKED){
+				activityState = ActivityStateMount.PARKED;
+				statusDesc.add("The Mount is parked.");
+			}else if (movementValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_MOVEMENT_PARKING){
+				activityState = ActivityStateMount.PARKING;
+				statusDesc.add("The Mount is parking.");
+			}
+
+			//TRACKING... -> It is controlled by a mount property. RTS2 doesn't use this flag
+//			long trackValueToCompare = (flags & Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_TRACK_MASK);
+//			if (trackValueToCompare == Rts2Constants.RTS2_DEVICE_MOUNT_FLAG_TRACK_TRACKING){
+//				activityState = ActivityStateMount.TRACKING;
+//				statusDesc.add("The Mount is tracking.");
+//			}
+		}
+				
 	}
 	
 

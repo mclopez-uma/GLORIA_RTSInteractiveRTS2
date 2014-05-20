@@ -37,7 +37,7 @@ import eu.gloria.tools.log.LogUtil;
  */
 public class MountRTD extends DeviceRTD implements RTDMountInterface {
 		
-	
+	private String pointedObject;
 	
 	/**
 	 * Constructor
@@ -549,6 +549,8 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntPark() throws RTException {
 		
+		pointedObject = null;
+		
 		long time = Rts2Date.now();
 		
 		if (!this.devExecuteCmd ("park", true))
@@ -590,16 +592,22 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntSlewToAltAz( double azimuth, double altitude) throws RTException {	
 						
-		long time = Rts2Date.now();
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		if (this.devExecuteCmd ("altaz+"+String.valueOf(altitude)+"+"+String.valueOf(azimuth),false)){
-			//Message recovering
-			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-			if (message != null)
-				throw new RTException(message);
-			
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+			long time = Rts2Date.now();
+
+			if (this.devExecuteCmd ("altaz+"+String.valueOf(altitude)+"+"+String.valueOf(azimuth),false)){
+				//Message recovering
+				String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+				if (message != null)
+					throw new RTException(message);
+
+			}else{
+				throw new RTException("Cannot slew");
+			}
 		}else{
-			throw new RTException("Cannot slew");
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
 		}
 			
 		
@@ -614,18 +622,25 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntSlewToAltAzAsync(double azimuth,
 			double altitude) throws RTException {		
+
+
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		long time = Rts2Date.now();
-		
-		
-		if (this.devExecuteCmdAsync ("altaz+"+String.valueOf(altitude)+"+"+String.valueOf(azimuth),false)){	
-			//Message recovering
-			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-			if (message != null)
-				throw new RTException(message);	
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+			long time = Rts2Date.now();
+
+
+			if (this.devExecuteCmdAsync ("altaz+"+String.valueOf(altitude)+"+"+String.valueOf(azimuth),false)){	
+				//Message recovering
+				String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+				if (message != null)
+					throw new RTException(message);	
+			}else{
+				throw new RTException("Cannot slew");
+			}	
 		}else{
-			throw new RTException("Cannot slew");
-		}				
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
+		}
 	}
 
 	/**
@@ -637,17 +652,25 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	public void mntSlewToCoordinates(double ascension,
 			double declination) throws RTException {
 		
-		long time = Rts2Date.now();
+		pointedObject = null;
 		
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		if (this.devExecuteCmdAsync ("move+"+String.valueOf(ascension)+"+"+String.valueOf(declination),false)){
-			//Message recovering --> due to serveral errors in bootes2
-//			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-//			if (message != null)
-//				throw new RTException(message);	
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){		
+			long time = Rts2Date.now();
+
+
+			if (this.devExecuteCmdAsync ("move+"+String.valueOf(ascension)+"+"+String.valueOf(declination),false)){
+				//Message recovering --> due to serveral errors in bootes2
+				//			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+				//			if (message != null)
+				//				throw new RTException(message);	
+			}else{
+				throw new RTException("Cannot slew");
+			}	
 		}else{
-			throw new RTException("Cannot slew");
-		}			
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
+		}
 		
 	}
 
@@ -660,17 +683,24 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	public void mntSlewToCoordinatesAsync( double ascension,
 			double declination) throws RTException {		
 	
-		long time = Rts2Date.now();
 		
-	
-		if (this.devExecuteCmdAsync ("move+"+String.valueOf(ascension)+"+"+String.valueOf(declination),false)){
-			//Message recovering
-			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-			if (message != null)
-				throw new RTException(message);	
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
+		
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+			long time = Rts2Date.now();
+
+
+			if (this.devExecuteCmdAsync ("move+"+String.valueOf(ascension)+"+"+String.valueOf(declination),false)){
+				//Message recovering
+				String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+				if (message != null)
+					throw new RTException(message);	
+			}else{
+				throw new RTException("Cannot slew");
+			}	
 		}else{
-			throw new RTException("Cannot slew");
-		}	
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
+		}
 
 		
 	}
@@ -765,21 +795,28 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntMoveNorth() throws RTException {
 
-		DeviceProperty property = this.devGetDeviceProperty("OFFS");
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		List<String> valueProp = new ArrayList<String>();
-		valueProp.add(property.getValue().get(0));
-		valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(1))+0.2));
-		
-		long time = Rts2Date.now();
-		
-		this.devUpdateDeviceProperty("OFFS", valueProp);
-		
-		//Message recovering
-		String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-		if (message!= null){
-			if ( message.contains("cannot move"))
-				throw new RTException(message);
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+
+			DeviceProperty property = this.devGetDeviceProperty("OFFS");
+
+			List<String> valueProp = new ArrayList<String>();
+			valueProp.add(property.getValue().get(0));
+			valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(1))+0.2));
+
+			long time = Rts2Date.now();
+
+			this.devUpdateDeviceProperty("OFFS", valueProp);
+
+			//Message recovering
+			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+			if (message!= null){
+				if ( message.contains("cannot move"))
+					throw new RTException(message);
+			}
+		}else{
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
 		}
 		
 	}
@@ -787,21 +824,27 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntMoveEast() throws RTException {
 
-		DeviceProperty property = this.devGetDeviceProperty("OFFS");
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		List<String> valueProp = new ArrayList<String>();
-		valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(0))+0.2));
-		valueProp.add(property.getValue().get(1));
-		
-		long time = Rts2Date.now();
-		
-		this.devUpdateDeviceProperty("OFFS", valueProp);
-		
-		//Message recovering
-		String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-		if (message!= null){
-			if ( message.contains("cannot move"))
-				throw new RTException(message);
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+			DeviceProperty property = this.devGetDeviceProperty("OFFS");
+
+			List<String> valueProp = new ArrayList<String>();
+			valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(0))+0.2));
+			valueProp.add(property.getValue().get(1));
+
+			long time = Rts2Date.now();
+
+			this.devUpdateDeviceProperty("OFFS", valueProp);
+
+			//Message recovering
+			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+			if (message!= null){
+				if ( message.contains("cannot move"))
+					throw new RTException(message);
+			}
+		}else{
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
 		}
 		
 	}
@@ -809,43 +852,55 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntMoveSouth() throws RTException {
 
-		DeviceProperty property = this.devGetDeviceProperty("OFFS");
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		List<String> valueProp = new ArrayList<String>();
-		valueProp.add(property.getValue().get(0));
-		valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(1))-0.2));
-		
-		long time = Rts2Date.now();
-		
-		this.devUpdateDeviceProperty("OFFS", valueProp);
-		
-		//Message recovering
-		String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-		if (message!= null){
-			if ( message.contains("cannot move"))
-				throw new RTException(message);
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+			DeviceProperty property = this.devGetDeviceProperty("OFFS");
+
+			List<String> valueProp = new ArrayList<String>();
+			valueProp.add(property.getValue().get(0));
+			valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(1))-0.2));
+
+			long time = Rts2Date.now();
+
+			this.devUpdateDeviceProperty("OFFS", valueProp);
+
+			//Message recovering
+			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+			if (message!= null){
+				if ( message.contains("cannot move"))
+					throw new RTException(message);
+			}
+		}else{
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
 		}
-		
+
 	}
 
 	@Override
 	public void mntMoveWest() throws RTException {
 
-		DeviceProperty property = this.devGetDeviceProperty("OFFS");
+		ActivityStateMount state = ((DeviceMount) this.devGetDevice(false)).getActivityState();
 		
-		List<String> valueProp = new ArrayList<String>();
-		valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(0))-0.2));
-		valueProp.add(property.getValue().get(1));
-		
-		long time = Rts2Date.now();
-		
-		this.devUpdateDeviceProperty("OFFS", valueProp);
-		
-		//Message recovering
-		String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-		if (message!= null){
-			if ( message.contains("cannot move"))
-				throw new RTException(message);
+		if ((state == ActivityStateMount.STOP) || (state == ActivityStateMount.PARKED)){
+			DeviceProperty property = this.devGetDeviceProperty("OFFS");
+
+			List<String> valueProp = new ArrayList<String>();
+			valueProp.add(String.valueOf(Double.valueOf(property.getValue().get(0))-0.2));
+			valueProp.add(property.getValue().get(1));
+
+			long time = Rts2Date.now();
+
+			this.devUpdateDeviceProperty("OFFS", valueProp);
+
+			//Message recovering
+			String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
+			if (message!= null){
+				if ( message.contains("cannot move"))
+					throw new RTException(message);
+			}
+		}else{
+			LogUtil.info(this,"MountRTD.mntSlewToCoordinates. Mount already moving");
 		}
 		
 	}
@@ -859,11 +914,10 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 	@Override
 	public void mntSlewObject(String object) throws RTException {
 		
-		double longitude = Config.getPropertyDouble("rt_config", "rts_longitude");
-		double latitude = Config.getPropertyDouble("rt_config", "rts_latitude");
+		pointedObject = null;
 		
-//		double longitude = Double.valueOf(this.devGetDeviceProperty("longitude").getValue().get(0));
-//		double latitude = Double.valueOf(this.devGetDeviceProperty("latitude").getValue().get(0));
+		double longitude = Config.getPropertyDouble("rt_config", "rts_longitude");
+		double latitude = Config.getPropertyDouble("rt_config", "rts_latitude");		
 
 		Catalogue catalogue = new Catalogue(longitude, latitude, 0);
 		ObjInfo objInfo = catalogue.getObject(object);
@@ -895,6 +949,8 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 			LogUtil.info(this,  "Mount. Catalogue:: Object found Data: "  + LogUtil.getLog(names, values));
 			
 			mntSlewToCoordinates(ra, dec);
+			
+			pointedObject = object;
 			
 		}
 		
@@ -1009,6 +1065,17 @@ public class MountRTD extends DeviceRTD implements RTDMountInterface {
 			LogUtil.severe(this, ex.getMessage());
 			throw new RTException(ex.getMessage());
 		}
+	}
+
+	@Override
+	public String mntGetPointedObject() throws RTException {
+		
+		if (pointedObject == null){
+			return "unknown";
+		}else{
+			return pointedObject;
+		}
+		
 	}
 		
 	

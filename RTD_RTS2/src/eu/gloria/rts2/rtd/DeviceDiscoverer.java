@@ -19,6 +19,8 @@ import eu.gloria.rtd.RTDDeviceInterface;
 import eu.gloria.rts2.http.Rts2Cmd;
 import eu.gloria.rts2.http.Rts2CmdType;
 import eu.gloria.rts2.http.Rts2CommunicationException;
+import eu.gloria.rts2.http.Rts2Constants;
+import eu.gloria.rts2.http.Rts2GatewayDeviceManager;
 import eu.gloria.tools.cache.CacheManager;
 import eu.gloria.tools.log.LogUtil;
 
@@ -113,10 +115,10 @@ public class DeviceDiscoverer implements DeviceDiscovererInterface {
 			}
 			
 			for (String deviceId: deviceIds){
-				
+				DeviceRTD dev = null;
 				try{
 				
-					DeviceRTD dev = (DeviceRTD) getRTD(deviceId);
+					dev = (DeviceRTD) getRTD(deviceId);
 					if (dev == null){
 						String[] names = {"deviceId"}; 
 						String[] values = {deviceId};
@@ -130,7 +132,13 @@ public class DeviceDiscoverer implements DeviceDiscovererInterface {
 					String[] values = {deviceId};
 					LogUtil.severe(this, deviceId + "DeviceDiscoverer.getDevices::Error resolving the deviceId." + LogUtil.getLog(names, values));
 					
-					throw ex;
+					if (!ex.getMessage().contains("The device does not exist"))
+						throw ex;
+					else{
+						Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
+						result.add(manager.getDeviceEntity(deviceId, dev.getDeviceType(deviceId), Rts2Constants.RTS2_DEVICE_FLAG_ERROR_HW));
+					}
+						
 				}
 				
 			}

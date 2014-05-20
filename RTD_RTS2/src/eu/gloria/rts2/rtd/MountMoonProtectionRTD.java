@@ -1,10 +1,6 @@
 package eu.gloria.rts2.rtd;
 
-import java.util.ArrayList;
-import java.util.Calendar;
 import java.util.Date;
-import java.util.GregorianCalendar;
-import java.util.List;
 
 import eu.gloria.rt.catalogue.Catalogue;
 import eu.gloria.rt.catalogue.ObjInfo;
@@ -19,110 +15,13 @@ import eu.gloria.rt.catalogue.libnova.LibNovaZoneDate;
 import eu.gloria.rt.entity.device.DeviceProperty;
 import eu.gloria.rt.exception.RTException;
 import eu.gloria.rt.unit.Radec;
-import eu.gloria.rts2.http.Rts2Date;
-import eu.gloria.rts2.http.Rts2MessageType;
-import eu.gloria.rts2.http.Rts2Messages;
 import eu.gloria.tools.configuration.Config;
 import eu.gloria.tools.conversion.DegreeFormat;
 import eu.gloria.tools.log.LogUtil;
 
-/**
- * RTS2 RTDMountInterface implementation for D50 telescope mount.
- * 
- * @author mclopez
- *
- */
-public class MountD50RTD extends MountRTD {
+public class MountMoonProtectionRTD extends MountRTD {
 
-	/**
-	 * Constructor
-	 */
-	public MountD50RTD() {
-		
-	}		
-	
-	
-	@Override
-	public boolean mntCanSetTracking() throws RTException {
-		
-		return true;
-		
-	}
-	
-	
-	@Override
-	public boolean mntGetTracking() throws RTException {
 
-		DeviceProperty property = this.devGetDeviceProperty("TRACKING");
-		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			return true;
-		else 
-			return false;
-	}
-	
-	
-	@Override
-	public void mntSetTracking(boolean value)
-			throws RTException {
-
-		List<String> valueProp = new ArrayList<String>();
-		
-		if (value)
-			valueProp.add("true"); 
-		else
-			valueProp.add("false");
-
-		long time = Rts2Date.now();
-		
-		if(!this.devUpdateDeviceProperty("TRACKING", valueProp))			
-			throw new RTException("Cannot set tracking");	
-		//Message recovering
-		String message = Rts2Messages.getMessageText (Rts2MessageType.error, getDeviceId(), time);
-		if (message != null)
-			throw new RTException(message);	
-		
-	}
-	
-	
-	@Override
-	public void mntMoveEast() throws RTException {
-		
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
-		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else
-			super.mntMoveEast();
-		
-	}
-	
-	
-	@Override
-	public void mntMoveSouth() throws RTException {
-		
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
-		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else
-			super.mntMoveSouth();
-		
-	}
-	
-	
-	@Override
-	public void mntMoveWest() throws RTException {
-
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
-		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else
-			super.mntMoveWest();
-		
-	}
-	
 	@Override
 	public void mntSlewObject(String object) throws RTException {
 		
@@ -174,67 +73,48 @@ public class MountD50RTD extends MountRTD {
 	
 	@Override
 	public void mntSlewToAltAz(double azimuth, double altitude) throws RTException {
-		
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
-		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else{
-			if (!targetClosedToAltAzMoon(altitude, azimuth))
-				super.mntSlewToAltAz(azimuth, altitude);
-			else
-				throw new RTException("Target too CLOSE to Moon");
+				
+		if (!targetClosedToAltAzMoon(altitude, azimuth))
+			super.mntSlewToAltAz(azimuth, altitude);
+		else
+			throw new RTException("Target too CLOSE to Moon");
 			
-		}
 		
 	}
 	
 	
 	@Override
 	public void mntSlewToAltAzAsync(double azimuth,	double altitude) throws RTException {	
+							
+		if (!targetClosedToAltAzMoon(altitude, azimuth))
+			super.mntSlewToAltAzAsync(azimuth, altitude);
+		else
+			throw new RTException("Target too CLOSE to Moon");
 		
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
-		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else{			
-			if (!targetClosedToAltAzMoon(altitude, azimuth))
-				super.mntSlewToAltAzAsync(azimuth, altitude);
-			else
-				throw new RTException("Target too CLOSE to Moon");
-		}
 	}
 
 	
 	@Override
 	public void mntSlewToCoordinates(double ascension,double declination) throws RTException {
 
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
+
+		if (!targetClosedToRadecMoon(ascension, declination))
+			super.mntSlewToCoordinates(ascension, declination);
+		else
+			throw new RTException("Target too CLOSE to Moon");
 		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else{			
-			if (!targetClosedToRadecMoon(ascension, declination))
-				super.mntSlewToCoordinates(ascension, declination);
-			else
-				throw new RTException("Target too CLOSE to Moon");
-		}
 		
 	}
 	
 	@Override
 	public void mntSlewToCoordinatesAsync(double ascension, double declination) throws RTException {		
 
-		DeviceProperty property = this.devGetDeviceProperty("block_move");
+
+		if (!targetClosedToRadecMoon(ascension, declination))
+			super.mntSlewToCoordinatesAsync(ascension, declination);
+		else
+			throw new RTException("Target too CLOSE to Moon");
 		
-		if (property.getValue().get(0).compareTo("1") == 0)
-			throw new RTException("Mount movement blocked");
-		else{
-			if (!targetClosedToRadecMoon(ascension, declination))
-				super.mntSlewToCoordinatesAsync(ascension, declination);
-			else
-				throw new RTException("Target too CLOSE to Moon");
-		}
 				
 	}
 	
@@ -376,7 +256,4 @@ public class MountD50RTD extends MountRTD {
 		return novaAltaz;
 		
 	}
-	
-	
-	
 }

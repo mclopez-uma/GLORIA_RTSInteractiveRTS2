@@ -15,16 +15,12 @@ import eu.gloria.tools.log.LogUtil;
 public class FocuserOptecTcfsRTD extends FocuserRTD {
 	
 	
-	/**
-	 * Maximum step position permitted.
-	 */
-	private static long MAX_STEP = 7000;
 	
 	/**
 	 * Constructor
 	 */
-	public FocuserOptecTcfsRTD () {
-		
+	public FocuserOptecTcfsRTD () {		
+	
 	}
 	
 	/**
@@ -60,7 +56,18 @@ public class FocuserOptecTcfsRTD extends FocuserRTD {
 	@Override
 	public long focGetMaxStep() throws RTException {
 
-		return MAX_STEP;
+		return Long.valueOf((DeviceRTD.configDeviceManager.getProperty(getDeviceId(), "MAX_VALUE")).getDefaultValue());
+	}
+	
+	/**
+	 * {@inheritDoc}
+	 * <p>
+	 *
+	 */
+	@Override
+	public long focGetMinStep() throws RTException {
+
+		return Long.valueOf((DeviceRTD.configDeviceManager.getProperty(getDeviceId(), "MIN_VALUE")).getDefaultValue());
 	}
 	
 	/**
@@ -110,7 +117,8 @@ public class FocuserOptecTcfsRTD extends FocuserRTD {
 		}
 		
 		long realPos = position + filterOffSet;
-		boolean rightPos = (0 <= realPos && realPos <= focGetMaxStep()); //0 <= POS_FOC + FOFF <= 7000
+//		boolean rightPos = (0 <= realPos && realPos <= focGetMaxStep()); 
+		boolean rightPos = (focGetMinStep() <= realPos && realPos <= focGetMaxStep()); //MIN <= POS_FOC + FOFF <= MAX
 		
 		if (!rightPos){
 			

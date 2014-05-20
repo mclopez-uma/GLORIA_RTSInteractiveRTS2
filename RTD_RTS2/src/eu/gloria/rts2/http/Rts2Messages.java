@@ -1,5 +1,12 @@
 package eu.gloria.rts2.http;
 
+import java.io.BufferedReader;
+import java.io.DataInputStream;
+import java.io.File;
+import java.io.FileInputStream;
+import java.io.FileNotFoundException;
+import java.io.IOException;
+import java.io.StringReader;
 import java.sql.Date;
 import java.text.DecimalFormat;
 import java.util.ArrayList;
@@ -8,6 +15,9 @@ import java.util.List;
 import java.util.Map;
 import java.util.logging.Logger;
 
+import org.codehaus.jackson.JsonNode;
+import org.codehaus.jackson.JsonParseException;
+import org.codehaus.jackson.map.JsonMappingException;
 import org.codehaus.jackson.map.ObjectMapper;
 
 import eu.gloria.rt.entity.device.DeviceType;
@@ -345,13 +355,79 @@ public class Rts2Messages {
 	 * @param jsonContent String 
 	 * @throws Rts2Exception
 	 */
-	private void getResponse (String jsonContent) throws Rts2Exception{
+	public void getResponse (String jsonContent) throws Rts2Exception{
 		
 		try{
 			DecimalFormat df = new DecimalFormat("##");			
 
 			ObjectMapper mapper = new ObjectMapper();
-			HashMap<String, Object> info = (HashMap<String, Object>) mapper.readValue(jsonContent, Object.class);
+//			HashMap<String, Object> info = (HashMap<String, Object>) mapper.readValue(jsonContent, Object.class);
+			
+			/***** Patch*****/
+			HashMap<String, Object> info = null;
+			
+			int count = 1;
+			while (count < 20){
+				
+				try {
+					info = (HashMap<String, Object>) mapper.readValue(jsonContent, Object.class);	
+					break;
+				} catch (JsonParseException e) {
+
+					Logger.getLogger(this.getClass().getName()).info("[JSON RESP::CMD MESSAGES]. Error in JSON format, trying to recover..." );
+					
+//					e.printStackTrace();
+					
+					BufferedReader reader = new BufferedReader(new StringReader(jsonContent));
+
+					String line = null;
+					String oldLine = null;
+					for (int i=1;i<=e.getLocation().getLineNr();i++){
+
+						line = reader.readLine();
+
+					}
+
+					oldLine = line.toString();
+//					System.out.print(line+"\n");
+//					System.out.print(line.substring(e.getLocation().getColumnNr()-4, e.getLocation().getColumnNr()-2).equals("\"") +"\n");
+//					System.out.print(line.substring(e.getLocation().getColumnNr()-4, e.getLocation().getColumnNr()+4).contains("\"") +"\n");
+					if (!line.substring(e.getLocation().getColumnNr()-6, e.getLocation().getColumnNr()+6).contains("\\\"")){
+						if (line.substring(e.getLocation().getColumnNr()-6, e.getLocation().getColumnNr()+6).contains("\"")){
+							int index = line.substring(e.getLocation().getColumnNr()-6, e.getLocation().getColumnNr()+6).indexOf("\"");
+//							System.out.print(index+"\n");
+							char[] newLine = line.concat(" ").toCharArray();
+
+							int j;
+							for (j=newLine.length;j>e.getLocation().getColumnNr()-6+index+1;j--)
+								newLine[j-1]=newLine[j-2];						
+
+//							System.out.print(String.valueOf(newLine)+"\n");
+//							System.out.print(j+"\n");
+//							newLine[e.getLocation().getColumnNr()-3]='\\';
+							newLine[j-1]='\\';
+
+							line = String.valueOf(newLine);
+						}
+
+					}
+
+//					System.out.print(line+"\n");
+//					System.out.print(oldLine+"\n");	
+					jsonContent = jsonContent.replace(oldLine, line);	
+//					System.out.print(jsonContent+"\n");
+					
+					count++;
+					
+				} catch (JsonMappingException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				} catch (IOException e) {
+					// TODO Auto-generated catch block
+					e.printStackTrace();
+				}
+			}
+			/***** Patch*****/
 
 			Logger.getLogger(this.getClass().getName()).info("[JSON RESP::CMD MESSAGES]. JSON content converted to Objects. DeviceId=" + this.getDeviceId() );
 
@@ -404,6 +480,34 @@ public class Rts2Messages {
 			throw new Rts2Exception("[JSON RESP::CMD MESSAGES]. Error analyzing the jsonContent. " + ex.getMessage());
 		}
 	}
+	
+	/******************************************************************************************************************************************/
+	
+	public static void main(String[] args) {
+		
+		File file = new File("C:\\repositorio\\messages.txt");
+		byte[] buffer = new byte[(int) file.length()];
+		DataInputStream in;
+		try {
+			in = new DataInputStream(new FileInputStream(file));
+			
+			in.readFully(buffer);
+			
+			Rts2Messages message = new Rts2Messages();
+			message.getResponse(new String (buffer));
+			
+		} catch (FileNotFoundException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (IOException e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		} catch (Rts2Exception e) {
+			// TODO Auto-generated catch block
+			e.printStackTrace();
+		}
+	}
+	
 
 
 

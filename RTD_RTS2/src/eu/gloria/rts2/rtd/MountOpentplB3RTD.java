@@ -15,7 +15,9 @@ import eu.gloria.rts2.http.Rts2Messages;
  * @author mclopez
  *
  */
-public class MountOpentplB3RTD extends MountRTD {
+//public class MountOpentplB3RTD extends MountRTD {
+public class MountOpentplB3RTD extends MountMoonProtectionRTD {
+
 
 	/**
 	 * Constructor

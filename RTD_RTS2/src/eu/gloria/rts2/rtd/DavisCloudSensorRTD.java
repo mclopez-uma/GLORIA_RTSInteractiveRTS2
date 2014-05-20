@@ -3,6 +3,7 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.ActivityState;
 import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
@@ -171,20 +172,22 @@ public class DavisCloudSensorRTD extends DeviceRTD implements RTDCloudDetectorIn
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (dev.getAlarmState() == AlarmState.NONE){
-			if (allProperties){
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (dev.getAlarmState() == AlarmState.NONE){
+				if (allProperties){
 
-				List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
+					List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
 
-				DeviceProperty devProperty = new DeviceProperty();
-				devProperty = devGetDeviceProperty("CLOUD_S");
-				devProperties.add(devProperty);
+					DeviceProperty devProperty = new DeviceProperty();
+					devProperty = devGetDeviceProperty("CLOUD_S");
+					devProperties.add(devProperty);
 
-				devProperty = devGetDeviceProperty("cloud_bad");
-				devProperties.add(devProperty);			
+					devProperty = devGetDeviceProperty("cloud_bad");
+					devProperties.add(devProperty);			
 
-				dev.getProperties().addAll(devProperties);
+					dev.getProperties().addAll(devProperties);
 
+				}
 			}
 		}
 		
@@ -219,21 +222,23 @@ public class DavisCloudSensorRTD extends DeviceRTD implements RTDCloudDetectorIn
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
-		DeviceProperty devProperty = new DeviceProperty();
-		
-		if (propertyNames.contains("CLOUD_S")){
-			
-			devProperty = devGetDeviceProperty("CLOUD_S");
-			devProperties.add(devProperty);
-		
-		}else if (propertyNames.contains("cloud_bad")){	
-			
-			devProperty = devGetDeviceProperty("cloud_bad");
-			devProperties.add(devProperty);				
+		if (dev.getActivityState() != ActivityState.ERROR){
+			List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
+			DeviceProperty devProperty = new DeviceProperty();
+
+			if (propertyNames.contains("CLOUD_S")){
+
+				devProperty = devGetDeviceProperty("CLOUD_S");
+				devProperties.add(devProperty);
+
+			}else if (propertyNames.contains("cloud_bad")){	
+
+				devProperty = devGetDeviceProperty("cloud_bad");
+				devProperties.add(devProperty);				
+			}
+
+			dev.getProperties().addAll(devProperties);
 		}
-		
-		dev.getProperties().addAll(devProperties);
 		
 		return dev;
 	}

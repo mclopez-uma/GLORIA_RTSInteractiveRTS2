@@ -3,6 +3,7 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.ActivityState;
 import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
@@ -160,28 +161,40 @@ public class DavisRHSensorRTD extends DeviceRTD implements RTDRHSensorInterface 
 		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
 		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
 		
-		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
+		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked				
 		dev.setActivityState(parent.getActivityState());
 		dev.setCommunicationState(parent.getCommunicationState());
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (dev.getAlarmState() == AlarmState.NONE){
-			if (allProperties){
-
-				List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
-
+		if (parent.getActivityState() != ActivityState.ERROR){
+			if (parent.getAlarmState() == AlarmState.NONE){
+				Double value, max;
+				List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();
 				DeviceProperty devProperty = new DeviceProperty();
+
+				//Always to be recovered due to alarm			
 				devProperty = devGetDeviceProperty("DOME_HUM");
+				value = Double.valueOf(devProperty.getValue().get(0));
 				devProperties.add(devProperty);
 
-				devProperty = devGetDeviceProperty("max_humidity");
-				devProperties.add(devProperty);			
 
+				devProperty = devGetDeviceProperty("max_humidity");
+				devProperties.add(devProperty);	
 				dev.getProperties().addAll(devProperties);
 
+				if (!devProperty.getValue().isEmpty()){
+					max = Double.valueOf(devProperty.getValue().get(0));
+					if (value > max)
+						dev.setAlarmState(AlarmState.WEATHER);
+				}
+
+
+			}else{
+				dev.setAlarmState(parent.getAlarmState());
 			}
+		}else{
+			dev.setAlarmState(parent.getAlarmState());
 		}
 		
 		return dev;
@@ -191,45 +204,7 @@ public class DavisRHSensorRTD extends DeviceRTD implements RTDRHSensorInterface 
 	@Override
 	public Device getDevice(List<String> propertyNames) throws RTException {
 		
-		DeviceGeneral dev = new DeviceGeneral();
-		
-		//sets the type
-		dev.setType(DeviceType.RH_SENSOR);
-		//Description
-		dev.setDescription("RTS2-unavailable");
-		//Info
-		dev.setInfo("RTS2-unavailable");
-		//ShortName
-		dev.setShortName(getDeviceId());
-		//Version
-		dev.setVersion("RTS2-unavailable");
-		
-		//Recover the parent device information
-		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
-		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
-		
-		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
-		dev.setActivityState(parent.getActivityState());
-		dev.setCommunicationState(parent.getCommunicationState());
-		dev.setActivityStateDesc(parent.getActivityStateDesc());
-		
-		//Properties
-		List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();;
-		DeviceProperty devProperty = new DeviceProperty();
-		
-		if (propertyNames.contains("DOME_HUM")){
-			
-			devProperty = devGetDeviceProperty("DOME_HUM");
-			devProperties.add(devProperty);
-		
-		}else if (propertyNames.contains("max_humidity")){	
-			
-			devProperty = devGetDeviceProperty("max_humidity");
-			devProperties.add(devProperty);				
-		}
-		
-		dev.getProperties().addAll(devProperties);
+		DeviceGeneral dev = (DeviceGeneral) devGetDevice(false);
 		
 		return dev;
 	}

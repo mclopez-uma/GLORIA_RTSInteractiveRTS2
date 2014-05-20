@@ -3,6 +3,7 @@ package eu.gloria.rts2.rtd;
 import java.util.ArrayList;
 import java.util.List;
 
+import eu.gloria.rt.entity.device.ActivityState;
 import eu.gloria.rt.entity.device.AlarmState;
 import eu.gloria.rt.entity.device.BlockState;
 import eu.gloria.rt.entity.device.Device;
@@ -27,7 +28,7 @@ import eu.gloria.rts2.http.Rts2Messages;
  */
 public class BARTD50WindSpeedSensorRTD extends DeviceRTD implements RTDWindSpeedInterface {
 
-	private String windProperty = null;
+	private AlarmState previousAlarm = null;
 	
 	@Override
 	public MeasureUnit wspGetMeasureUnit() throws RTException {
@@ -89,24 +90,44 @@ public class BARTD50WindSpeedSensorRTD extends DeviceRTD implements RTDWindSpeed
 		Rts2GatewayDeviceManager manager = new Rts2GatewayDeviceManager();
 		DeviceGeneral parent = (DeviceGeneral) manager.getDevice(getParentDeviceId(), null);
 		
-		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensor are not blocked
-		dev.setAlarmState(parent.getAlarmState());		
+		dev.setBlockState(BlockState.UNBLOCK);	//Weather sensors are not blocked
+		if (parent.getActivityState() != ActivityState.ERROR){
+			if (parent.getAlarmState()== AlarmState.NONE){
+				AlarmState alarm = getAlarmState();	
+				if (alarm != null){
+					dev.setAlarmState(getAlarmState());
+					previousAlarm = alarm;
+				}else{
+					if (previousAlarm == null) //First time value within margins
+						dev.setAlarmState(AlarmState.NONE);
+					else
+						dev.setAlarmState(previousAlarm);
+				}
+			}else{
+				dev.setAlarmState(parent.getAlarmState());
+			}		
+		}else{
+			dev.setAlarmState(parent.getAlarmState());
+		}
+		
 		dev.setActivityState(parent.getActivityState());
 		dev.setCommunicationState(parent.getCommunicationState());
 		dev.setActivityStateDesc(parent.getActivityStateDesc());
 		
 		//Properties
-		if (dev.getAlarmState() == AlarmState.NONE){
-			if (allProperties){
+		if (dev.getActivityState() != ActivityState.ERROR){
+			if (dev.getAlarmState() == AlarmState.NONE){
+				if (allProperties){
 
-				List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();
+					List <DeviceProperty> devProperties = new ArrayList<DeviceProperty>();
 
-				DeviceProperty devProperty = new DeviceProperty();
-				devProperty = devGetDeviceProperty("WIND_SPEED");
-				devProperties.add(devProperty);
+					DeviceProperty devProperty = new DeviceProperty();
+					devProperty = devGetDeviceProperty("WIND_SPEED");
+					devProperties.add(devProperty);
 
-				dev.getProperties().addAll(devProperties);
+					dev.getProperties().addAll(devProperties);
 
+				}
 			}
 		}
 		return dev;
@@ -118,6 +139,21 @@ public class BARTD50WindSpeedSensorRTD extends DeviceRTD implements RTDWindSpeed
 		
 		return devGetDevice(true);
 		
+	}
+	
+	private AlarmState getAlarmState() throws RTException{
+		
+		DeviceProperty trigBad = this.devGetDeviceProperty("WIND_TRIGBAD");
+		DeviceProperty trigGood = this.devGetDeviceProperty("WIND_TRIGGOOD");
+		double measure = Double.valueOf(this.devGetDeviceProperty("WIND_SPEED").getValue().get(1));
+		
+		if (measure > Double.parseDouble(trigBad.getValue().get(0))){
+			return AlarmState.WEATHER;
+		}else if (measure < Double.parseDouble(trigGood.getValue().get(0))){
+			return AlarmState.NONE;
+		}
+		
+		return null;
 	}
 
 }
